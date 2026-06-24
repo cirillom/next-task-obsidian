@@ -332,7 +332,11 @@ export class TaskAggregatorView extends ItemView {
 			}
 		}
 
-		return [...tags].sort((a, b) => a.localeCompare(b));
+		return [...tags].sort((a, b) => {
+			const descendantDiff = this.getDescendantCount(b) - this.getDescendantCount(a);
+
+			return descendantDiff !== 0 ? descendantDiff : a.localeCompare(b);
+		});
 	}
 
 	private parseTagFilter(value: string): string[] {
@@ -348,6 +352,10 @@ export class TaskAggregatorView extends ItemView {
 
 	private getTaskFilterTags(task: TaskItem): string[] {
 		return (task.resolvedTags ?? task.tags).map((tag) => this.normalizeTag(tag));
+	}
+
+	private getDescendantCount(tag: string): number {
+		return Math.max(0, this.tagGraph.expandDescendants(tag).size - 1);
 	}
 
 	private addOption(select: HTMLSelectElement, value: string, text: string): void {
