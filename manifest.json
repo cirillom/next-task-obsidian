@@ -1,7 +1,7 @@
 {
   "id": "task-aggregator",
   "name": "Task Aggregator",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "minAppVersion": "1.5.0",
   "description": "Aggregate, filter, and sort markdown tasks by metadata.",
   "author": "Matheus Cirillo",
