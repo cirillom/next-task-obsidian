@@ -283,7 +283,18 @@ export class TaskAggregatorView extends ItemView {
 				.then(() => this.refresh());
 		});
 
-		meta.createSpan({ text: `priority: ${task.priority ?? "none"}` });
+		const priorityInput = meta.createEl("input");
+		priorityInput.type = "number";
+		priorityInput.min = "1";
+		priorityInput.value = task.priority?.toString() ?? "";
+		priorityInput.addEventListener("change", () => {
+			const priority = priorityInput.value === ""
+				? null
+				: Math.max(1, Math.floor(Number(priorityInput.value)));
+
+			void this.plugin.updateTaskPriority(task, priority)
+				.then(() => this.refresh());
+		});
 
 		if (task.tags.length > 0) {
 			const tags = card.createDiv({ cls: "task-aggregator-tags" });
