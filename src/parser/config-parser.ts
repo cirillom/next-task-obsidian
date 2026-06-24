@@ -8,7 +8,7 @@ const TAG_RELATION_SEPARATOR = "|";
 
 export type TaskConfig = {
 	tagGraph: TagGraph;
-	scoreFormula: string | null;
+	scoreScript: string | null;
 };
 
 export function parseTagGraphConfig(source: string): TagGraph {
@@ -17,7 +17,7 @@ export function parseTagGraphConfig(source: string): TagGraph {
 
 export function parseTaskConfig(source: string): TaskConfig {
 	const graph = new TagGraph();
-	let scoreFormula: string | null = null;
+	let scoreScript: string | null = null;
 	const lines = source.split(/\r?\n/);
 
 	for (let i = 0; i < lines.length; i++) {
@@ -35,7 +35,7 @@ export function parseTaskConfig(source: string): TaskConfig {
 		const scoreMatch = trimmedLine.match(SCORE_FORMULA);
 
 		if (scoreMatch) {
-			scoreFormula = scoreMatch[1]?.trim() ?? null;
+			scoreScript = scoreMatch[1]?.trim() ?? null;
 			continue;
 		}
 
@@ -52,7 +52,7 @@ export function parseTaskConfig(source: string): TaskConfig {
 				scoreLines.push(scoreLine);
 			}
 
-			scoreFormula = scoreLines.join("\n");
+			scoreScript = scoreLines.join("\n");
 			continue;
 		}
 
@@ -77,7 +77,7 @@ export function parseTaskConfig(source: string): TaskConfig {
 				scoreLines.push(scoreLine);
 			}
 
-			scoreFormula = scoreLines.join("\n");
+			scoreScript = scoreLines.join("\n");
 			continue;
 		}
 
@@ -101,6 +101,6 @@ export function parseTaskConfig(source: string): TaskConfig {
 
 	return {
 		tagGraph: graph,
-		scoreFormula
+		scoreScript
 	};
 }

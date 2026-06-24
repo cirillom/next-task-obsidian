@@ -1,7 +1,7 @@
 import { MarkdownView, Notice, Plugin, TFile } from "obsidian";
 import { parseTasksFromMarkdown } from "./parser/task-parser";
 import type { TaskItem } from "./model/task";
-import { DEFAULT_SCORE_FORMULA, scoreTask, validateScoreFormula } from "./scoring/score";
+import { DEFAULT_SCORE_SCRIPT, scoreTask, validateScoreScript } from "./scoring/score";
 import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
 import { parseTaskConfig } from "./parser/config-parser";
 import { TagGraph, normalizeTag } from "./model/tag-graph";
@@ -78,7 +78,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async loadTasks(
-		scoreFormula = DEFAULT_SCORE_FORMULA,
+		scoreScript = DEFAULT_SCORE_SCRIPT,
 		tagGraph = new TagGraph()
 	): Promise<TaskItem[]> {
 		const files = this.app.vault
@@ -102,7 +102,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 				}
 
 				task.resolvedTags = this.expandTaskTags(task.tags, tagGraph);
-				task.score = scoreTask(task, new Date(), scoreFormula);
+				task.score = scoreTask(task, new Date(), scoreScript);
 				allTasks.push(task);
 			}
 
@@ -117,7 +117,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	async loadTaskAggregatorData(): Promise<TaskAggregatorData> {
 		const configResult = await this.loadConfig();
 		const tasks = await this.loadTasks(
-			configResult.scoreFormula ?? DEFAULT_SCORE_FORMULA,
+			configResult.scoreScript ?? DEFAULT_SCORE_SCRIPT,
 			configResult.tagGraph
 		);
 
@@ -412,7 +412,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 
 	private async loadConfig(): Promise<{
 		tagGraph: TagGraph;
-		scoreFormula: string | null;
+		scoreScript: string | null;
 		scoreError: string | null;
 		status: TaskAggregatorData["configStatus"];
 		error: string | null;
@@ -422,7 +422,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 		if (!(configFile instanceof TFile)) {
 			return {
 				tagGraph: new TagGraph(),
-				scoreFormula: null,
+				scoreScript: null,
 				scoreError: null,
 				status: "missing",
 				error: null
@@ -435,8 +435,8 @@ export default class TaskAggregatorPlugin extends Plugin {
 
 			return {
 				tagGraph: config.tagGraph,
-				scoreFormula: config.scoreFormula,
-				scoreError: config.scoreFormula ? validateScoreFormula(config.scoreFormula) : null,
+				scoreScript: config.scoreScript,
+				scoreError: config.scoreScript ? validateScoreScript(config.scoreScript) : null,
 				status: "loaded",
 				error: null
 			};
@@ -445,7 +445,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 
 			return {
 				tagGraph: new TagGraph(),
-				scoreFormula: null,
+				scoreScript: null,
 				scoreError: null,
 				status: "error",
 				error: error instanceof Error ? error.message : "Unknown error"

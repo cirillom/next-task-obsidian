@@ -14,7 +14,7 @@ type ScoreFunction = (
 	dueOffsetDays: number
 ) => unknown;
 
-export const DEFAULT_SCORE_FORMULA = `
+export const DEFAULT_SCORE_SCRIPT = `
 const dueBonus =
 	dueOffsetDays > 0 ? 100 :
 	dueOffsetDays >= -1 ? 50 :
@@ -24,13 +24,10 @@ const dueBonus =
 return priority * 20 + ageDays * 1.5 + dueBonus;
 `;
 
-// Friendlier name for newer code, while preserving the old export expected by main.ts.
-export const DEFAULT_SCORE_SCRIPT = DEFAULT_SCORE_FORMULA;
-
 export function scoreTask(
 	task: TaskItem,
 	now = new Date(),
-	formula = DEFAULT_SCORE_FORMULA
+	script = DEFAULT_SCORE_SCRIPT
 ): number {
 	if (task.completed) {
 		return 0;
@@ -39,16 +36,16 @@ export function scoreTask(
 	const variables = getScoreVariables(task, now);
 
 	try {
-		return evaluateScoreScript(formula, variables);
+		return evaluateScoreScript(script, variables);
 	} catch (error) {
-		console.error("Task Aggregator score formula failed. Falling back to default.", error);
-		return evaluateScoreScript(DEFAULT_SCORE_FORMULA, variables);
+		console.error("Task Aggregator score script failed. Falling back to default.", error);
+		return evaluateScoreScript(DEFAULT_SCORE_SCRIPT, variables);
 	}
 }
 
-export function validateScoreFormula(formula: string): string | null {
+export function validateScoreScript(script: string): string | null {
 	try {
-		evaluateScoreScript(formula, {
+		evaluateScoreScript(script, {
 			priority: 1,
 			ageDays: 0,
 			dueOffsetDays: 0
@@ -56,13 +53,8 @@ export function validateScoreFormula(formula: string): string | null {
 
 		return null;
 	} catch (error) {
-		return error instanceof Error ? error.message : "Invalid score formula";
+		return error instanceof Error ? error.message : "Invalid score script";
 	}
-}
-
-// Friendlier name for newer code, while preserving validateScoreFormula for main.ts.
-export function validateScoreScript(script: string): string | null {
-	return validateScoreFormula(script);
 }
 
 function getScoreVariables(task: TaskItem, now: Date): ScoreVariables {
@@ -102,7 +94,7 @@ function evaluateScoreScript(script: string, variables: ScoreVariables): number 
 	);
 
 	if (typeof result !== "number" || !Number.isFinite(result)) {
-		throw new Error("Score formula must return a finite number.");
+		throw new Error("Score script must return a finite number.");
 	}
 
 	return result;
@@ -115,7 +107,7 @@ function buildScoreFunction(script: string): ScoreFunction {
 ${script}
 `;
 
-	// This is intentional: the score formula is user-provided JavaScript from Tasks-Config.md.
+	// This is intentional: the score script is user-provided JavaScript from Tasks-Config.md.
 	// Keep the eval-like behavior isolated to this function.
 	// eslint-disable-next-line @typescript-eslint/no-implied-eval
 	return new Function("priority", "ageDays", "dueOffsetDays", source) as ScoreFunction;
