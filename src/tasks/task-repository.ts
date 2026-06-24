@@ -2,9 +2,17 @@ import { App, MarkdownView, Notice, TFile } from "obsidian";
 import { CONFIG_FILE_PATH, TASKS_FILE_PATH } from "../constants";
 import type { TaskItem } from "../model/task";
 import { DEFAULT_STATUS_DEFINITIONS } from "../model/task-status";
-import { normalizeTag, TagGraph } from "../model/tag-graph";
+import { TagGraph } from "../model/tag-graph";
 import { parseTasksFromMarkdown } from "../parser/task-parser";
 import { DEFAULT_SCORE_SCRIPT, scoreTask } from "../scoring/score";
+import {
+	buildTaskMarkdownLines,
+	updateTaskLineCompleted,
+	updateTaskLineDueDate,
+	updateTaskLinePriority,
+	updateTaskLineStatus,
+	updateTaskLineTags
+} from "./task-markdown";
 import { modifyTaskLine, replaceTaskBlock } from "./task-source";
 
 export type NewTaskInput = {
@@ -54,18 +62,12 @@ export class TaskRepository {
 			return;
 		}
 
-		const metadata = [
-			input.status ? `@s:${input.status}` : null,
-			`@c:${this.getTodayIsoDate()}`,
-			input.dueDate ? `@d:${input.dueDate}` : null,
-			`@p:${input.priority}`,
-			...input.tags.map((tag) => `#${normalizeTag(tag)}`)
-		].filter((value): value is string => value !== null);
-		const description = input.description.trim();
-		const taskText = [
-			`- [ ] ${title} ${metadata.join(" ")}`,
-			...(description.length > 0 ? [`    ${description.replace(/\n/g, "\n    ")}`] : [])
-		].join("\n");
+		const taskText = buildTaskMarkdownLines({
+			...input,
+			title,
+			completed: false,
+			createdDate: this.getTodayIsoDate()
+		}).join("\n");
 		const tasksFile = this.app.vault.getAbstractFileByPath(TASKS_FILE_PATH);
 
 		if (!(tasksFile instanceof TFile)) {
@@ -89,18 +91,12 @@ export class TaskRepository {
 			return;
 		}
 
-		const metadata = [
-			!task.completed && input.status ? `@s:${input.status}` : null,
-			`@c:${task.createdDate}`,
-			input.dueDate ? `@d:${input.dueDate}` : null,
-			`@p:${input.priority}`,
-			...input.tags.map((tag) => `#${normalizeTag(tag)}`)
-		].filter((value): value is string => value !== null);
-		const description = input.description.trim();
-		const nextTaskLines = [
-			`- [${task.completed ? "x" : " "}] ${title} ${metadata.join(" ")}`,
-			...(description.length > 0 ? [`    ${description.replace(/\n/g, "\n    ")}`] : [])
-		];
+		const nextTaskLines = buildTaskMarkdownLines({
+			...input,
+			title,
+			completed: task.completed,
+			createdDate: task.createdDate
+		});
 
 		await replaceTaskBlock(this.app, task, nextTaskLines);
 	}
@@ -109,52 +105,31 @@ export class TaskRepository {
 		const nextStatus = task.completed ? null : status;
 
 		await modifyTaskLine(this.app, task, (line) => {
-			const lineWithoutStatus = line.replace(/\s+@s:[^\s]+/, "");
-
-			return nextStatus === null
-				? lineWithoutStatus
-				: `${lineWithoutStatus.trimEnd()} @s:${nextStatus}`;
+			return updateTaskLineStatus(line, nextStatus);
 		});
 	}
 
 	async updateTaskCompleted(task: TaskItem, completed: boolean): Promise<void> {
 		await modifyTaskLine(this.app, task, (line) => {
-			const nextLine = line.replace(/^(\s*-\s+\[)( |x|X)(\]\s+)/, `$1${completed ? "x" : " "}$3`);
-
-			return completed ? nextLine.replace(/\s+@s:[^\s]+/, "") : nextLine;
+			return updateTaskLineCompleted(line, completed);
 		});
 	}
 
 	async updateTaskDueDate(task: TaskItem, dueDate: string | null): Promise<void> {
 		await modifyTaskLine(this.app, task, (line) => {
-			const lineWithoutDueDate = line.replace(/\s+@d:[^\s]+/, "");
-
-			return dueDate === null
-				? lineWithoutDueDate
-				: `${lineWithoutDueDate.trimEnd()} @d:${dueDate}`;
+			return updateTaskLineDueDate(line, dueDate);
 		});
 	}
 
 	async updateTaskPriority(task: TaskItem, priority: number): Promise<void> {
 		await modifyTaskLine(this.app, task, (line) => {
-			const lineWithoutPriority = line.replace(/\s+@p:[^\s]+/, "");
-
-			return `${lineWithoutPriority.trimEnd()} @p:${priority}`;
+			return updateTaskLinePriority(line, priority);
 		});
 	}
 
 	async updateTaskTags(task: TaskItem, tags: string[]): Promise<void> {
-		const normalizedTags = tags
-			.map((tag) => normalizeTag(tag))
-			.filter((tag) => tag.length > 0);
-		const tagText = normalizedTags.map((tag) => `#${tag}`).join(" ");
-
 		await modifyTaskLine(this.app, task, (line) => {
-			const lineWithoutTags = line.replace(/\s+#[\p{L}\p{N}_/-]+/gu, "");
-
-			return tagText.length === 0
-				? lineWithoutTags
-				: `${lineWithoutTags.trimEnd()} ${tagText}`;
+			return updateTaskLineTags(line, tags);
 		});
 	}
 
@@ -184,7 +159,7 @@ export class TaskRepository {
 		for (const task of tasks) {
 			if (task.completed && task.status !== null) {
 				const lineIndex = task.line - 1;
-				lines[lineIndex] = (lines[lineIndex] ?? "").replace(/\s+@s:[^\s]+/, "");
+				lines[lineIndex] = updateTaskLineStatus(lines[lineIndex] ?? "", null);
 				task.status = null;
 				didRemoveDoneStatuses = true;
 			}
