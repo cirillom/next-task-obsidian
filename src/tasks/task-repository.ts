@@ -33,25 +33,14 @@ export class TaskRepository {
 		for (const file of files) {
 			const content = await this.app.vault.cachedRead(file);
 			const tasks = parseTasksFromMarkdown(content, file.path);
-			const lines = content.split(/\r?\n/);
-			let didRemoveDoneStatuses = false;
 
 			for (const task of tasks) {
-				if (task.completed && task.status !== null) {
-					const lineIndex = task.line - 1;
-					lines[lineIndex] = (lines[lineIndex] ?? "").replace(/\s+@s:[^\s]+/, "");
-					task.status = null;
-					didRemoveDoneStatuses = true;
-				}
-
 				task.resolvedTags = this.expandTaskTags(task.tags, tagGraph);
 				task.score = scoreTask(task, new Date(), scoreScript);
 				allTasks.push(task);
 			}
 
-			if (didRemoveDoneStatuses) {
-				await this.app.vault.modify(file, lines.join("\n"));
-			}
+			await this.normalizeCompletedTaskStatuses(file, content, tasks);
 		}
 
 		return allTasks.sort((a, b) => b.score - a.score);
@@ -182,6 +171,28 @@ export class TaskRepository {
 
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		view?.editor.setCursor({ line: Math.max(0, task.line - 1), ch: 0 });
+	}
+
+	private async normalizeCompletedTaskStatuses(
+		file: TFile,
+		content: string,
+		tasks: TaskItem[]
+	): Promise<void> {
+		const lines = content.split(/\r?\n/);
+		let didRemoveDoneStatuses = false;
+
+		for (const task of tasks) {
+			if (task.completed && task.status !== null) {
+				const lineIndex = task.line - 1;
+				lines[lineIndex] = (lines[lineIndex] ?? "").replace(/\s+@s:[^\s]+/, "");
+				task.status = null;
+				didRemoveDoneStatuses = true;
+			}
+		}
+
+		if (didRemoveDoneStatuses) {
+			await this.app.vault.modify(file, lines.join("\n"));
+		}
 	}
 
 	private expandTaskTags(tags: string[], tagGraph: TagGraph): string[] {
