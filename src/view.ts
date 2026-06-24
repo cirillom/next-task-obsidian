@@ -2,8 +2,10 @@ import { ItemView, setIcon, WorkspaceLeaf } from "obsidian";
 import type TaskAggregatorPlugin from "./main";
 import type { TaskItem } from "./model/task";
 import { TagGraph, normalizeTag } from "./model/tag-graph";
+import { renderStatusFilter } from "./ui/status-filter";
 import { renderTaskCard } from "./ui/task-card";
 import { TaskFormModal } from "./ui/task-form-modal";
+import { renderTagFilter } from "./ui/tag-filter";
 
 export const TASK_AGGREGATOR_VIEW = "task-aggregator-view";
 
@@ -168,105 +170,32 @@ export class TaskAggregatorView extends ItemView {
 	private renderStatusHints(container: HTMLElement): void {
 		const statuses = this.getAvailableStatuses();
 
-		if (statuses.length === 0) {
-			return;
-		}
-
-		const selectedStatuses = new Set(this.parseStatusFilter(this.statusFilterText));
-		const statusHints = container.createDiv({ cls: "task-aggregator-status-hints" });
-		statusHints.createSpan({
-			text: "Status",
-			cls: "task-aggregator-status-hints-label"
-		});
-
-		for (const status of statuses) {
-			const isSelected = selectedStatuses.has(status);
-			const button = statusHints.createEl("button", {
-				text: status,
-				cls: isSelected
-					? "task-aggregator-status-hint task-aggregator-status-hint-selected"
-					: "task-aggregator-status-hint"
-			});
-
-			button.addEventListener("click", () => {
-				if (selectedStatuses.has(status)) {
-					selectedStatuses.delete(status);
-				} else {
-					selectedStatuses.add(status);
-				}
-
-				this.statusFilterText = [...selectedStatuses].join(" ");
+		renderStatusFilter(container, {
+			statuses,
+			selectedStatuses: new Set(this.parseStatusFilter(this.statusFilterText)),
+			onChange: (selectedStatuses) => {
+				this.statusFilterText = selectedStatuses.join(" ");
 				this.render();
-			});
-		}
+			}
+		});
 	}
 
 	private renderAvailableTagHints(container: HTMLElement): void {
 		const tags = this.getAvailableTags();
 
-		if (tags.length === 0) {
-			return;
-		}
-
-		const tagHints = container.createDiv({ cls: "task-aggregator-tag-hints" });
-		const tagHintControls = tagHints.createDiv({ cls: "task-aggregator-tag-hint-controls" });
-
-		const searchInput = tagHintControls.createEl("input", {
-			cls: "task-aggregator-tag-search"
-		});
-		searchInput.type = "search";
-		searchInput.placeholder = "Search tags";
-		searchInput.value = this.tagSearchText;
-		searchInput.setSelectionRange(this.tagSearchText.length, this.tagSearchText.length);
-		searchInput.focus();
-		searchInput.addEventListener("input", () => {
-			this.tagSearchText = searchInput.value;
-			this.render();
-		});
-
-		const visibleTags = tags.filter((tag) => tag.includes(this.normalizeTag(this.tagSearchText)));
-		const selectedTags = new Set(this.parseTagFilter(this.tagFilterText));
-		const allVisibleSelected = visibleTags.every((tag) => selectedTags.has(tag));
-
-		const toggleAllButton = tagHintControls.createEl("button", {
-			text: allVisibleSelected ? "Deselect all" : "Select all",
-			cls: "task-aggregator-tag-hint"
-		});
-
-		toggleAllButton.addEventListener("click", () => {
-			if (allVisibleSelected) {
-				this.tagFilterText = [...selectedTags]
-					.filter((tag) => !visibleTags.includes(tag))
-					.join(" ");
-			} else {
-				this.tagFilterText = [...new Set([...selectedTags, ...visibleTags])].join(" ");
-			}
-
-			this.render();
-		});
-
-		const tagHintList = tagHints.createDiv({ cls: "task-aggregator-tag-hint-list" });
-
-		for (const tag of visibleTags) {
-			const isSelected = selectedTags.has(tag);
-			const button = tagHintList.createEl("button", {
-				text: `#${tag}`,
-				cls: isSelected
-					? "task-aggregator-tag-hint task-aggregator-tag-hint-selected"
-					: "task-aggregator-tag-hint"
-			});
-
-			button.addEventListener("click", () => {
-				if (selectedTags.has(tag)) {
-					selectedTags.delete(tag);
-				} else {
-					selectedTags.add(tag);
-				}
-
-				this.tagFilterText = [...selectedTags].join(" ");
+		renderTagFilter(container, {
+			tags,
+			selectedTags: new Set(this.parseTagFilter(this.tagFilterText)),
+			searchText: this.tagSearchText,
+			onSearchChange: (searchText) => {
+				this.tagSearchText = searchText;
 				this.render();
-			});
-		}
+			},
+			onChange: (selectedTags) => {
+				this.tagFilterText = selectedTags.join(" ");
+				this.render();
+			}
+		});
 	}
 
 	private renderTask(parent: HTMLElement, task: TaskItem): void {
