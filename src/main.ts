@@ -1,12 +1,21 @@
 import { Notice, Plugin, TFile } from "obsidian";
 import { parseTasksFromMarkdown } from "./parser/task-parser";
 import type { TaskItem } from "./model/task";
-import { scoreTask } from "./scoring/score";
+import { DEFAULT_SCORE_FORMULA, scoreTask } from "./scoring/score";
 import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
-import { parseTagGraphConfig } from "./parser/config-parser";
+import { parseTaskConfig } from "./parser/config-parser";
 import { TagGraph } from "./model/tag-graph";
 
 const CONFIG_FILE_PATH = "Tasks-Config.md";
+const CONFIG_TEMPLATE = `# Task Aggregator config
+# Formula variables: priority, ageDays, daysUntilDue, duePressure, statusPenalty
+score = ${DEFAULT_SCORE_FORMULA}
+
+# Tag relationships
+# child-tag #parent-tag #another-parent
+obsidian #plugin #notes
+plugin #programming #project
+`;
 
 export type TaskAggregatorData = {
 	tasks: TaskItem[];
@@ -41,6 +50,14 @@ export default class TaskAggregatorPlugin extends Plugin {
 			callback: async () => {
 				await this.refreshOpenViews();
 				new Notice("Task aggregator refreshed");
+			}
+		});
+
+		this.addCommand({
+			id: "create-config-template",
+			name: "Create config template",
+			callback: async () => {
+				await this.createConfigTemplate();
 			}
 		});
 	}
@@ -81,7 +98,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 		}
 	}
 
-	async loadTasks(): Promise<TaskItem[]> {
+	async loadTasks(scoreFormula = DEFAULT_SCORE_FORMULA): Promise<TaskItem[]> {
 		const files = this.app.vault
 			.getMarkdownFiles()
 			.filter((file) => file.path !== CONFIG_FILE_PATH);
@@ -93,7 +110,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 			const tasks = parseTasksFromMarkdown(content, file.path);
 
 			for (const task of tasks) {
-				task.score = scoreTask(task);
+				task.score = scoreTask(task, new Date(), scoreFormula);
 				allTasks.push(task);
 			}
 		}
@@ -102,10 +119,8 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async loadTaskAggregatorData(): Promise<TaskAggregatorData> {
-		const [tasks, configResult] = await Promise.all([
-			this.loadTasks(),
-			this.loadTagGraph()
-		]);
+		const configResult = await this.loadConfig();
+		const tasks = await this.loadTasks(configResult.scoreFormula ?? DEFAULT_SCORE_FORMULA);
 
 		return {
 			tasks,
@@ -116,8 +131,22 @@ export default class TaskAggregatorPlugin extends Plugin {
 		};
 	}
 
-	private async loadTagGraph(): Promise<{
+	private async createConfigTemplate(): Promise<void> {
+		const existingConfig = this.app.vault.getAbstractFileByPath(CONFIG_FILE_PATH);
+
+		if (existingConfig) {
+			new Notice("Tasks-Config.md already exists");
+			return;
+		}
+
+		await this.app.vault.create(CONFIG_FILE_PATH, CONFIG_TEMPLATE);
+		new Notice("Tasks-Config.md created");
+		await this.refreshOpenViews();
+	}
+
+	private async loadConfig(): Promise<{
 		tagGraph: TagGraph;
+		scoreFormula: string | null;
 		status: TaskAggregatorData["configStatus"];
 		error: string | null;
 	}> {
@@ -126,6 +155,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 		if (!(configFile instanceof TFile)) {
 			return {
 				tagGraph: new TagGraph(),
+				scoreFormula: null,
 				status: "missing",
 				error: null
 			};
@@ -133,9 +163,11 @@ export default class TaskAggregatorPlugin extends Plugin {
 
 		try {
 			const content = await this.app.vault.cachedRead(configFile);
+			const config = parseTaskConfig(content);
 
 			return {
-				tagGraph: parseTagGraphConfig(content),
+				tagGraph: config.tagGraph,
+				scoreFormula: config.scoreFormula,
 				status: "loaded",
 				error: null
 			};
@@ -144,6 +176,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 
 			return {
 				tagGraph: new TagGraph(),
+				scoreFormula: null,
 				status: "error",
 				error: error instanceof Error ? error.message : "Unknown error"
 			};

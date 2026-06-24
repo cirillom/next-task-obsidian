@@ -1,9 +1,20 @@
 import { TagGraph, normalizeTag } from "../model/tag-graph";
 
 const PARENT_TAG = /#([\p{L}\p{N}_/-]+)/gu;
+const SCORE_FORMULA = /^score\s*[:=]\s*(.+)$/i;
+
+export type TaskConfig = {
+	tagGraph: TagGraph;
+	scoreFormula: string | null;
+};
 
 export function parseTagGraphConfig(source: string): TagGraph {
+	return parseTaskConfig(source).tagGraph;
+}
+
+export function parseTaskConfig(source: string): TaskConfig {
 	const graph = new TagGraph();
+	let scoreFormula: string | null = null;
 	const lines = source.split(/\r?\n/);
 
 	for (const line of lines) {
@@ -14,6 +25,13 @@ export function parseTagGraphConfig(source: string): TagGraph {
 			trimmedLine.startsWith("# ") ||
 			trimmedLine.startsWith("//")
 		) {
+			continue;
+		}
+
+		const scoreMatch = trimmedLine.match(SCORE_FORMULA);
+
+		if (scoreMatch) {
+			scoreFormula = scoreMatch[1]?.trim() ?? null;
 			continue;
 		}
 
@@ -33,5 +51,8 @@ export function parseTagGraphConfig(source: string): TagGraph {
 		}
 	}
 
-	return graph;
+	return {
+		tagGraph: graph,
+		scoreFormula
+	};
 }
