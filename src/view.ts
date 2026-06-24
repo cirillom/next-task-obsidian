@@ -22,7 +22,7 @@ import { renderTaskCard } from "./ui/task-card";
 import { TaskFormModal } from "./ui/task-form-modal";
 import { renderTagFilter } from "./ui/tag-filter";
 
-export const TASK_AGGREGATOR_VIEW = "task-aggregator-view";
+export const NEXT_TASK_VIEW = "next-task-view";
 
 export class TaskAggregatorView extends ItemView {
 	private plugin: TaskAggregatorPlugin;
@@ -46,11 +46,11 @@ export class TaskAggregatorView extends ItemView {
 	}
 
 	getViewType(): string {
-		return TASK_AGGREGATOR_VIEW;
+		return NEXT_TASK_VIEW;
 	}
 
 	getDisplayText(): string {
-		return "Task aggregator";
+		return "Next task";
 	}
 
 	getIcon(): string {
@@ -84,7 +84,7 @@ export class TaskAggregatorView extends ItemView {
 		container.empty();
 
 		const title = container.createDiv({ cls: "task-aggregator-title-row" });
-		title.createEl("h2", { text: "Task aggregator" });
+		title.createEl("h2", { text: "Next task" });
 		const refreshButton = title.createEl("button", { cls: "task-aggregator-icon-button" });
 		refreshButton.ariaLabel = "Refresh";
 		setIcon(refreshButton, "refresh-cw");

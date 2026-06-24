@@ -1,9 +1,9 @@
 {
-  "id": "task-aggregator",
-  "name": "Task Aggregator",
-  "version": "1.0.0",
+  "id": "next-task",
+  "name": "Next Task",
+  "version": "1.0.0-rc.1",
   "minAppVersion": "1.5.0",
-  "description": "Aggregate, filter, and sort markdown tasks by metadata.",
+  "description": "Find the next task to work on using metadata, tags, statuses, and a configurable score.",
   "author": "Matheus Cirillo",
   "isDesktopOnly": false
 }

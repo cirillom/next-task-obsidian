@@ -1,11 +1,11 @@
-# Task Aggregator config
+# Next Task config
 
 # Score formula
 Available variables: `priority, ageDays, dueOffsetDays`
 statusValue is defined by the matching status below.
 dueOffsetDays is negative before due date and positive after due date.
 ```js
-// Task Aggregator score
+// Next Task score
 
 let score = 0;
 

@@ -1,92 +1,206 @@
-# Obsidian Sample Plugin
+# Next Task
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Next Task is an Obsidian plugin for finding the next task worth working on.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+Markdown task lists are wonderful because they stay close to your notes, but they become hard to use once tasks are spread across projects, daily notes, research notes, and reference material. Next Task scans your vault for task metadata, shows everything in one focused view, and lets you filter, edit, and rank tasks without moving them out of their original files.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+## What it solves
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+Next Task is built for people who keep tasks inside real notes instead of a separate task database.
 
-## First time developing plugins?
+It helps when:
 
-Quick starting guide for new plugin devs:
+- tasks live across many markdown files
+- some tasks are more urgent or important than others
+- tags have hierarchy, such as `#plugin` belonging to `#project`
+- done tasks should disappear from the main working view
+- task priority should be calculated from your own rules
+- you want to edit task metadata without jumping back to the source file every time
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+The plugin does not try to replace your notes with a separate system. It reads and writes normal markdown tasks in place.
 
-## Releasing new releases
+## Task format
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+For a markdown checkbox to be treated as a Next Task task, it must have:
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+- a creation date with `@c:YYYY-MM-DD`
+- a priority with `@p:number`
 
-## Adding your plugin to the community plugin list
+Example:
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint
-
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+```md
+- [ ] Write release notes @c:2026-06-24 @d:2026-06-30 @p:3 @s:doing #next-task
+    Include install instructions and release assets.
 ```
 
-If you have multiple URLs, you can also do:
+Supported metadata:
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
+- `@c:` creation date, required
+- `@p:` priority, required, integer starting at `1`
+- `@d:` due date, optional
+- `@s:` status, optional
+- `#tags`, optional
+
+The description is stored as indented markdown below the task. It can include normal markdown, links, and math that Obsidian can render.
+
+## Task view
+
+The Next Task view collects matching tasks from your vault and shows them as editable cards.
+
+From the card view you can:
+
+- mark a task done or undone
+- change due date
+- change priority
+- change status
+- open the source file at the task line
+- click a tag to filter by it
+- open a modal to edit title, metadata, tags, and description
+
+When a task is marked done, Next Task removes its `@s:` status. Done tasks get a score of `0`.
+
+## Default task file
+
+New tasks are created in:
+
+```text
+Tasks.md
 ```
 
-## API Documentation
+If the file does not exist, Next Task creates it.
 
-See https://docs.obsidian.md
+## Configuration
+
+Next Task uses:
+
+```text
+Tasks-Config.md
+```
+
+You can open or create it from the gear icon in the Next Task view.
+
+The config file controls tag relationships, statuses, and scoring.
+
+## Tag relationships
+
+Tag relationships let a child tag also count as its parents when filtering.
+
+Example:
+
+```md
+#plugin | #programming #project
+#next-task | #plugin
+```
+
+If a task has `#next-task`, it can also match filters for `#plugin`, `#programming`, and `#project`.
+
+In the task card itself, only the tags written directly on the task are shown. Parent tags are used internally for filtering and sorting.
+
+## Statuses
+
+Statuses are configured in `Tasks-Config.md`.
+
+Format:
+
+```md
+status-name | default-marker score-value
+```
+
+Example:
+
+```md
+todo | default 0
+doing | default 1
+blocked | - 2
+done | - 0
+```
+
+The `default` marker means that status is selected by default in the status filter.
+
+The number is exposed to the score script as:
+
+```js
+statusValue
+```
+
+This lets you make status part of your ranking formula.
+
+## Scoring
+
+Next Task calculates a score for every task and sorts higher scores first.
+
+The score is configured with JavaScript in a code block inside `Tasks-Config.md`.
+
+Available variables:
+
+- `priority`
+- `ageDays`
+- `dueOffsetDays`
+- `statusValue`
+
+`dueOffsetDays` works like a launch countdown:
+
+- negative before the due date
+- zero on the due date or when no due date exists
+- positive after the due date
+
+Example:
+
+```js
+let score = 0;
+
+score += priority * 20;
+score += ageDays * 1.5;
+score += statusValue * 10;
+
+if (dueOffsetDays > 0) {
+	score += dueOffsetDays * 50;
+}
+
+return score;
+```
+
+If the score script has a syntax or runtime error, Next Task shows a warning and falls back to the default score calculation.
+
+## Manual installation
+
+Download the release asset and place these files in:
+
+```text
+<Vault>/.obsidian/plugins/next-task/
+```
+
+Required files:
+
+- `manifest.json`
+- `main.js`
+- `styles.css`
+
+Then enable **Next Task** in Obsidian under **Settings -> Community plugins**.
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run checks:
+
+```bash
+npm run lint
+npm run build
+```
+
+Build release files:
+
+```bash
+npm run build
+```
+
+The built plugin entry file is `main.js`.
+
+## License
+
+MIT

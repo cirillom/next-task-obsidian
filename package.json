@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
-	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"name": "next-task-obsidian",
+	"version": "1.0.0-rc.1",
+	"description": "Find the next Obsidian task to work on using metadata, tags, statuses, and a configurable score.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
@@ -10,8 +10,12 @@
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "eslint ."
 	},
-	"keywords": [],
-	"license": "0-BSD",
+	"keywords": [
+		"obsidian",
+		"tasks",
+		"productivity"
+	],
+	"license": "MIT",
 	"devDependencies": {
 		"@eslint/js": "^9.39.4",
 		"@types/node": "^22.15.17",

@@ -47,7 +47,7 @@ export function scoreTask(
 	try {
 		return evaluateScoreScript(script, variables);
 	} catch (error) {
-		console.error("Task Aggregator score script failed. Falling back to default.", error);
+		console.error("Next Task score script failed. Falling back to default.", error);
 		return evaluateScoreScript(DEFAULT_SCORE_SCRIPT, variables);
 	}
 }

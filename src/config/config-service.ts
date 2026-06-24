@@ -46,7 +46,7 @@ export class ConfigService {
 				error: null
 			};
 		} catch (error) {
-			console.error(`Task Aggregator failed to load ${CONFIG_FILE_PATH}`, error);
+			console.error(`Next Task failed to load ${CONFIG_FILE_PATH}`, error);
 
 			return {
 				tagGraph: new TagGraph(),

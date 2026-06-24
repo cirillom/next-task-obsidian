@@ -2,7 +2,7 @@ import { Notice, Plugin } from "obsidian";
 import type { TaskItem } from "./model/task";
 import type { TaskStatusDefinition } from "./model/task-status";
 import { DEFAULT_SCORE_SCRIPT } from "./scoring/score";
-import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
+import { NEXT_TASK_VIEW, TaskAggregatorView } from "./view";
 import { TagGraph } from "./model/tag-graph";
 import { registerCommands } from "./commands";
 import { ConfigService } from "./config/config-service";
@@ -33,7 +33,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 		this.configService = new ConfigService(this.app);
 
 		this.registerView(
-			TASK_AGGREGATOR_VIEW,
+			NEXT_TASK_VIEW,
 			(leaf) => new TaskAggregatorView(leaf, this)
 		);
 
@@ -41,7 +41,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async activateView(): Promise<void> {
-		const existingLeaves = this.app.workspace.getLeavesOfType(TASK_AGGREGATOR_VIEW);
+		const existingLeaves = this.app.workspace.getLeavesOfType(NEXT_TASK_VIEW);
 		const existingLeaf = existingLeaves[0];
 
 		if (existingLeaf) {
@@ -57,7 +57,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 		}
 
 		await leaf.setViewState({
-			type: TASK_AGGREGATOR_VIEW,
+			type: NEXT_TASK_VIEW,
 			active: true
 		});
 
@@ -65,7 +65,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async refreshOpenViews(): Promise<void> {
-		const leaves = this.app.workspace.getLeavesOfType(TASK_AGGREGATOR_VIEW);
+		const leaves = this.app.workspace.getLeavesOfType(NEXT_TASK_VIEW);
 
 		for (const leaf of leaves) {
 			const view = leaf.view;

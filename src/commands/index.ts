@@ -2,7 +2,7 @@ import { Notice } from "obsidian";
 import type TaskAggregatorPlugin from "../main";
 
 export function registerCommands(plugin: TaskAggregatorPlugin): void {
-	plugin.addRibbonIcon("list-todo", "Open task aggregator", async () => {
+	plugin.addRibbonIcon("list-todo", "Open next task", async () => {
 		await plugin.activateView();
 	});
 
@@ -19,7 +19,7 @@ export function registerCommands(plugin: TaskAggregatorPlugin): void {
 		name: "Refresh",
 		callback: async () => {
 			await plugin.refreshOpenViews();
-			new Notice("Task aggregator refreshed");
+			new Notice("Next task refreshed");
 		}
 	});
 
