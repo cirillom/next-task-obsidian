@@ -254,11 +254,6 @@ export class TaskAggregatorView extends ItemView {
 		});
 
 		header.createEl("span", {
-			text: `created: ${task.createdDate}`,
-			cls: "task-aggregator-created-date"
-		});
-
-		header.createEl("span", {
 			text: `score: ${task.score.toFixed(1)}`,
 			cls: "task-aggregator-score"
 		});
@@ -279,7 +274,17 @@ export class TaskAggregatorView extends ItemView {
 		const priorityField = meta.createDiv({ cls: "task-aggregator-field" });
 		priorityField.createSpan({ text: "Priority", cls: "task-aggregator-field-label" });
 
-		const priorityInput = priorityField.createEl("input");
+		const priorityControls = priorityField.createDiv({ cls: "task-aggregator-priority-controls" });
+		const decreasePriorityButton = priorityControls.createEl("button", { text: "-" });
+		const priorityInput = priorityControls.createEl("input");
+		const increasePriorityButton = priorityControls.createEl("button", { text: "+" });
+
+		decreasePriorityButton.disabled = (task.priority ?? 1) <= 1;
+		decreasePriorityButton.addEventListener("click", () => {
+			void this.plugin.updateTaskPriority(task, Math.max(1, (task.priority ?? 1) - 1))
+				.then(() => this.refresh());
+		});
+
 		priorityInput.type = "number";
 		priorityInput.min = "1";
 		priorityInput.required = true;
@@ -288,6 +293,11 @@ export class TaskAggregatorView extends ItemView {
 			const priority = Math.max(1, Math.floor(Number(priorityInput.value) || 1));
 
 			void this.plugin.updateTaskPriority(task, priority)
+				.then(() => this.refresh());
+		});
+
+		increasePriorityButton.addEventListener("click", () => {
+			void this.plugin.updateTaskPriority(task, (task.priority ?? 1) + 1)
 				.then(() => this.refresh());
 		});
 
@@ -326,7 +336,7 @@ export class TaskAggregatorView extends ItemView {
 		}
 
 		card.createEl("small", {
-			text: `${task.filePath}:${task.line}`,
+			text: `${task.filePath}:${task.line} · created: ${task.createdDate}`,
 			cls: "task-aggregator-source"
 		});
 	}

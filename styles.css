@@ -25,7 +25,6 @@
 	flex: 1;
 }
 
-.task-aggregator-created-date,
 .task-aggregator-score {
 	color: var(--text-muted);
 	font-size: 0.85em;
@@ -48,6 +47,22 @@
 .task-aggregator-field-label {
 	color: var(--text-muted);
 	font-size: 0.75em;
+}
+
+.task-aggregator-priority-controls {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.task-aggregator-priority-controls input {
+	width: 48px;
+	text-align: center;
+}
+
+.task-aggregator-priority-controls button {
+	width: 28px;
+	padding-inline: 0;
 }
 
 .task-aggregator-tags {
