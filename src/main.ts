@@ -124,9 +124,11 @@ export default class TaskAggregatorPlugin extends Plugin {
 		}
 
 		const lineWithoutStatus = line.replace(/\s+@s:[^\s]+/, "");
-		lines[lineIndex] = status === null
+		const nextStatus = task.completed ? null : status;
+
+		lines[lineIndex] = nextStatus === null
 			? lineWithoutStatus
-			: `${lineWithoutStatus.trimEnd()} @s:${status}`;
+			: `${lineWithoutStatus.trimEnd()} @s:${nextStatus}`;
 
 		await this.app.vault.modify(file, lines.join("\n"));
 	}

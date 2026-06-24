@@ -109,11 +109,21 @@
 	gap: 6px;
 }
 
+.task-aggregator-status-hints {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	margin: 8px 0 12px;
+}
+
+.task-aggregator-status-hints-label,
 .task-aggregator-tag-hints-label {
 	color: var(--text-muted);
 	font-size: 0.85em;
 }
 
+.task-aggregator-status-hint,
 .task-aggregator-tag-hint {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 999px;
@@ -123,6 +133,7 @@
 	cursor: pointer;
 }
 
+.task-aggregator-status-hint-selected,
 .task-aggregator-tag-hint-selected {
 	border-color: var(--interactive-accent);
 	background: var(--interactive-accent);

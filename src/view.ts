@@ -5,9 +5,8 @@ import { TagGraph, normalizeTag } from "./model/tag-graph";
 
 export const TASK_AGGREGATOR_VIEW = "task-aggregator-view";
 
-const ALL_STATUSES = "__all__";
-const NO_STATUS = "__none__";
 const EDITABLE_STATUSES = ["doing", "blocked"] as const;
+const STATUS_ORDER = ["todo", "doing", "blocked", "done"];
 
 export class TaskAggregatorView extends ItemView {
 	private plugin: TaskAggregatorPlugin;
@@ -18,7 +17,7 @@ export class TaskAggregatorView extends ItemView {
 	private configError: string | null = null;
 	private cycles: string[][] = [];
 
-	private statusFilter = ALL_STATUSES;
+	private statusFilterText = "";
 	private tagFilterText = "";
 	private tagSearchText = "";
 
@@ -87,29 +86,6 @@ export class TaskAggregatorView extends ItemView {
 	private renderControls(container: HTMLElement): void {
 		const controls = container.createDiv({ cls: "task-aggregator-controls" });
 
-		const statusGroup = controls.createDiv({ cls: "task-aggregator-control-group" });
-		statusGroup.createEl("label", { text: "Status" });
-
-		const statusSelect = statusGroup.createEl("select");
-		this.addOption(statusSelect, ALL_STATUSES, "All statuses");
-
-		const statuses = this.getAvailableStatuses();
-
-		if (statuses.has(null)) {
-			this.addOption(statusSelect, NO_STATUS, "No status");
-		}
-
-		for (const status of [...statuses].filter((s): s is string => s !== null)) {
-			this.addOption(statusSelect, status, status);
-		}
-
-		statusSelect.value = this.statusFilter;
-
-		statusSelect.addEventListener("change", () => {
-			this.statusFilter = statusSelect.value;
-			this.render();
-		});
-
 		const buttons = controls.createDiv({ cls: "task-aggregator-buttons" });
 
 		const refreshButton = buttons.createEl("button", { text: "Refresh" });
@@ -118,6 +94,7 @@ export class TaskAggregatorView extends ItemView {
 		});
 
 		this.renderConfigStatus(container);
+		this.renderStatusHints(container);
 		this.renderAvailableTagHints(container);
 	}
 
@@ -149,6 +126,42 @@ export class TaskAggregatorView extends ItemView {
 
 		for (const cycle of this.cycles) {
 			list.createEl("li", { text: cycle.join(" -> ") });
+		}
+	}
+
+	private renderStatusHints(container: HTMLElement): void {
+		const statuses = this.getAvailableStatuses();
+
+		if (statuses.length === 0) {
+			return;
+		}
+
+		const selectedStatuses = new Set(this.parseStatusFilter(this.statusFilterText));
+		const statusHints = container.createDiv({ cls: "task-aggregator-status-hints" });
+		statusHints.createSpan({
+			text: "Status",
+			cls: "task-aggregator-status-hints-label"
+		});
+
+		for (const status of statuses) {
+			const isSelected = selectedStatuses.has(status);
+			const button = statusHints.createEl("button", {
+				text: status,
+				cls: isSelected
+					? "task-aggregator-status-hint task-aggregator-status-hint-selected"
+					: "task-aggregator-status-hint"
+			});
+
+			button.addEventListener("click", () => {
+				if (selectedStatuses.has(status)) {
+					selectedStatuses.delete(status);
+				} else {
+					selectedStatuses.add(status);
+				}
+
+				this.statusFilterText = [...selectedStatuses].join(" ");
+				this.render();
+			});
 		}
 	}
 
@@ -245,7 +258,7 @@ export class TaskAggregatorView extends ItemView {
 		const meta = card.createDiv({ cls: "task-aggregator-meta" });
 
 		const statusSelect = meta.createEl("select");
-		this.addOption(statusSelect, "", "No status");
+		this.addOption(statusSelect, "", "");
 
 		for (const status of EDITABLE_STATUSES) {
 			this.addOption(statusSelect, status, status);
@@ -287,22 +300,15 @@ export class TaskAggregatorView extends ItemView {
 
 	private getFilteredTasks(): TaskItem[] {
 		const tagFilter = this.parseTagFilter(this.tagFilterText);
+		const statusFilter = this.parseStatusFilter(this.statusFilterText);
 
 		return this.allTasks.filter((task) => {
-			return this.matchesStatusFilter(task) && this.matchesTagFilter(task, tagFilter);
+			return this.matchesStatusFilter(task, statusFilter) && this.matchesTagFilter(task, tagFilter);
 		});
 	}
 
-	private matchesStatusFilter(task: TaskItem): boolean {
-		if (this.statusFilter === ALL_STATUSES) {
-			return true;
-		}
-
-		if (this.statusFilter === NO_STATUS) {
-			return task.status === null;
-		}
-
-		return task.status === this.statusFilter;
+	private matchesStatusFilter(task: TaskItem, statusFilter: string[]): boolean {
+		return statusFilter.length === 0 || statusFilter.includes(this.getTaskFilterStatus(task));
 	}
 
 	private matchesTagFilter(task: TaskItem, tagFilter: string[]): boolean {
@@ -318,14 +324,18 @@ export class TaskAggregatorView extends ItemView {
 		);
 	}
 
-	private getAvailableStatuses(): Set<string | null> {
-		const statuses = new Set<string | null>();
+	private getAvailableStatuses(): string[] {
+		const statuses = new Set<string>();
 
 		for (const task of this.allTasks) {
-			statuses.add(task.status);
+			statuses.add(this.getTaskFilterStatus(task));
 		}
 
-		return statuses;
+		return [...statuses].sort((a, b) => {
+			const orderDiff = STATUS_ORDER.indexOf(a) - STATUS_ORDER.indexOf(b);
+
+			return orderDiff !== 0 ? orderDiff : a.localeCompare(b);
+		});
 	}
 
 	private getAvailableTags(): string[] {
@@ -351,6 +361,13 @@ export class TaskAggregatorView extends ItemView {
 			.filter((tag) => tag.length > 0);
 	}
 
+	private parseStatusFilter(value: string): string[] {
+		return value
+			.split(/\s+/)
+			.map((status) => status.trim())
+			.filter((status) => status.length > 0);
+	}
+
 	private normalizeTag(tag: string): string {
 		return normalizeTag(tag);
 	}
@@ -361,6 +378,14 @@ export class TaskAggregatorView extends ItemView {
 
 	private getDescendantCount(tag: string): number {
 		return Math.max(0, this.tagGraph.expandDescendants(tag).size - 1);
+	}
+
+	private getTaskFilterStatus(task: TaskItem): string {
+		if (task.status) {
+			return task.status;
+		}
+
+		return task.completed ? "done" : "todo";
 	}
 
 	private addOption(select: HTMLSelectElement, value: string, text: string): void {
