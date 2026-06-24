@@ -22,8 +22,9 @@ export function parseTasksFromMarkdown(source: string, filePath: string): TaskIt
 		const createdDate = extractField(rawBody, "c");
 		const dueDate = extractField(rawBody, "d");
 		const priorityRaw = extractField(rawBody, "p");
+		const priority = priorityRaw ? Number(priorityRaw) : NaN;
 
-		if (!createdDate || !priorityRaw) {
+		if (!createdDate || !isValidPriority(priority)) {
 			continue;
 		}
 
@@ -45,7 +46,7 @@ export function parseTasksFromMarkdown(source: string, filePath: string): TaskIt
 			status,
 			createdDate,
 			dueDate,
-			priority: Number(priorityRaw),
+			priority,
 			tags,
 			description: descriptionLines.join("\n"),
 			filePath,
@@ -61,4 +62,8 @@ export function parseTasksFromMarkdown(source: string, filePath: string): TaskIt
 function extractField(text: string, field: string): string | null {
 	const match = text.match(new RegExp(`@${field}:([^\\s]+)`));
 	return match?.[1] ?? null;
+}
+
+function isValidPriority(priority: number): boolean {
+	return Number.isInteger(priority) && priority >= 1;
 }
