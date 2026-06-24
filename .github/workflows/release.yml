@@ -3,11 +3,6 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: "Branch to release from"
-        required: true
-        default: "main"
-        type: string
       release_type:
         description: "Version bump type"
         required: true
@@ -30,7 +25,6 @@ jobs:
       - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch }}
           fetch-depth: 0
 
       - name: Setup Git identity
@@ -107,7 +101,7 @@ jobs:
 
       - name: Push branch and tag
         run: |
-          BRANCH="${{ inputs.branch }}"
+          BRANCH="${{ github.ref_name }}"
           TAG="${{ steps.bump.outputs.tag }}"
 
           git push origin "HEAD:${BRANCH}"
