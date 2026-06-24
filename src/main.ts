@@ -7,6 +7,7 @@ import { parseTaskConfig } from "./parser/config-parser";
 import { TagGraph, normalizeTag } from "./model/tag-graph";
 import { registerCommands } from "./commands";
 import taskConfigTemplate from "./templates/Tasks-Config.md";
+import { modifyTaskLine, replaceTaskBlock } from "./tasks/task-source";
 
 const CONFIG_FILE_PATH = "Tasks-Config.md";
 const TASKS_FILE_PATH = "Tasks.md";
@@ -132,31 +133,15 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async updateTaskStatus(task: TaskItem, status: string | null): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(task.filePath);
-
-		if (!(file instanceof TFile)) {
-			new Notice("Could not find task file");
-			return;
-		}
-
-		const content = await this.app.vault.read(file);
-		const lines = content.split(/\r?\n/);
-		const lineIndex = task.line - 1;
-		const line = lines[lineIndex];
-
-		if (line === undefined) {
-			new Notice("Could not find task line");
-			return;
-		}
-
-		const lineWithoutStatus = line.replace(/\s+@s:[^\s]+/, "");
 		const nextStatus = task.completed ? null : status;
 
-		lines[lineIndex] = nextStatus === null
-			? lineWithoutStatus
-			: `${lineWithoutStatus.trimEnd()} @s:${nextStatus}`;
+		await modifyTaskLine(this.app, task, (line) => {
+			const lineWithoutStatus = line.replace(/\s+@s:[^\s]+/, "");
 
-		await this.app.vault.modify(file, lines.join("\n"));
+			return nextStatus === null
+				? lineWithoutStatus
+				: `${lineWithoutStatus.trimEnd()} @s:${nextStatus}`;
+		});
 	}
 
 	async openTaskSource(task: TaskItem): Promise<void> {
@@ -220,25 +205,10 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async updateTask(task: TaskItem, input: NewTaskInput): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(task.filePath);
 		const title = input.title.trim();
-
-		if (!(file instanceof TFile)) {
-			new Notice("Could not find task file");
-			return;
-		}
 
 		if (title.length === 0) {
 			new Notice("Task title is required");
-			return;
-		}
-
-		const content = await this.app.vault.read(file);
-		const lines = content.split(/\r?\n/);
-		const lineIndex = task.line - 1;
-
-		if (lines[lineIndex] === undefined) {
-			new Notice("Could not find task line");
 			return;
 		}
 
@@ -254,118 +224,49 @@ export default class TaskAggregatorPlugin extends Plugin {
 			`- [${task.completed ? "x" : " "}] ${title} ${metadata.join(" ")}`,
 			...(description.length > 0 ? [`    ${description.replace(/\n/g, "\n    ")}`] : [])
 		];
-		let deleteCount = 1;
 
-		while (lines[lineIndex + deleteCount] !== undefined && /^\s{2,}\S/.test(lines[lineIndex + deleteCount] ?? "")) {
-			deleteCount++;
-		}
-
-		lines.splice(lineIndex, deleteCount, ...nextTaskLines);
-		await this.app.vault.modify(file, lines.join("\n"));
+		await replaceTaskBlock(this.app, task, nextTaskLines);
 	}
 
 	async updateTaskCompleted(task: TaskItem, completed: boolean): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(task.filePath);
+		await modifyTaskLine(this.app, task, (line) => {
+			const nextLine = line.replace(/^(\s*-\s+\[)( |x|X)(\]\s+)/, `$1${completed ? "x" : " "}$3`);
 
-		if (!(file instanceof TFile)) {
-			new Notice("Could not find task file");
-			return;
-		}
-
-		const content = await this.app.vault.read(file);
-		const lines = content.split(/\r?\n/);
-		const lineIndex = task.line - 1;
-		const line = lines[lineIndex];
-
-		if (line === undefined) {
-			new Notice("Could not find task line");
-			return;
-		}
-
-		const nextLine = line.replace(/^(\s*-\s+\[)( |x|X)(\]\s+)/, `$1${completed ? "x" : " "}$3`);
-		lines[lineIndex] = completed ? nextLine.replace(/\s+@s:[^\s]+/, "") : nextLine;
-
-		await this.app.vault.modify(file, lines.join("\n"));
+			return completed ? nextLine.replace(/\s+@s:[^\s]+/, "") : nextLine;
+		});
 	}
 
 	async updateTaskDueDate(task: TaskItem, dueDate: string | null): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(task.filePath);
+		await modifyTaskLine(this.app, task, (line) => {
+			const lineWithoutDueDate = line.replace(/\s+@d:[^\s]+/, "");
 
-		if (!(file instanceof TFile)) {
-			new Notice("Could not find task file");
-			return;
-		}
-
-		const content = await this.app.vault.read(file);
-		const lines = content.split(/\r?\n/);
-		const lineIndex = task.line - 1;
-		const line = lines[lineIndex];
-
-		if (line === undefined) {
-			new Notice("Could not find task line");
-			return;
-		}
-
-		const lineWithoutDueDate = line.replace(/\s+@d:[^\s]+/, "");
-		lines[lineIndex] = dueDate === null
-			? lineWithoutDueDate
-			: `${lineWithoutDueDate.trimEnd()} @d:${dueDate}`;
-
-		await this.app.vault.modify(file, lines.join("\n"));
+			return dueDate === null
+				? lineWithoutDueDate
+				: `${lineWithoutDueDate.trimEnd()} @d:${dueDate}`;
+		});
 	}
 
 	async updateTaskPriority(task: TaskItem, priority: number): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(task.filePath);
+		await modifyTaskLine(this.app, task, (line) => {
+			const lineWithoutPriority = line.replace(/\s+@p:[^\s]+/, "");
 
-		if (!(file instanceof TFile)) {
-			new Notice("Could not find task file");
-			return;
-		}
-
-		const content = await this.app.vault.read(file);
-		const lines = content.split(/\r?\n/);
-		const lineIndex = task.line - 1;
-		const line = lines[lineIndex];
-
-		if (line === undefined) {
-			new Notice("Could not find task line");
-			return;
-		}
-
-		const lineWithoutPriority = line.replace(/\s+@p:[^\s]+/, "");
-		lines[lineIndex] = `${lineWithoutPriority.trimEnd()} @p:${priority}`;
-
-		await this.app.vault.modify(file, lines.join("\n"));
+			return `${lineWithoutPriority.trimEnd()} @p:${priority}`;
+		});
 	}
 
 	async updateTaskTags(task: TaskItem, tags: string[]): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(task.filePath);
-
-		if (!(file instanceof TFile)) {
-			new Notice("Could not find task file");
-			return;
-		}
-
-		const content = await this.app.vault.read(file);
-		const lines = content.split(/\r?\n/);
-		const lineIndex = task.line - 1;
-		const line = lines[lineIndex];
-
-		if (line === undefined) {
-			new Notice("Could not find task line");
-			return;
-		}
-
 		const normalizedTags = tags
 			.map((tag) => normalizeTag(tag))
 			.filter((tag) => tag.length > 0);
-		const lineWithoutTags = line.replace(/\s+#[\p{L}\p{N}_/-]+/gu, "");
 		const tagText = normalizedTags.map((tag) => `#${tag}`).join(" ");
-		lines[lineIndex] = tagText.length === 0
-			? lineWithoutTags
-			: `${lineWithoutTags.trimEnd()} ${tagText}`;
 
-		await this.app.vault.modify(file, lines.join("\n"));
+		await modifyTaskLine(this.app, task, (line) => {
+			const lineWithoutTags = line.replace(/\s+#[\p{L}\p{N}_/-]+/gu, "");
+
+			return tagText.length === 0
+				? lineWithoutTags
+				: `${lineWithoutTags.trimEnd()} ${tagText}`;
+		});
 	}
 
 	async addConfigTag(tag: string): Promise<string | null> {
