@@ -1,8 +1,17 @@
 import { ItemView, setIcon, WorkspaceLeaf } from "obsidian";
-import { CONFIG_FILE_PATH, STATUS_ORDER } from "./constants";
+import { CONFIG_FILE_PATH } from "./constants";
 import type TaskAggregatorPlugin from "./main";
 import type { TaskItem } from "./model/task";
 import { TagGraph, normalizeTag } from "./model/tag-graph";
+import {
+	DEFAULT_STATUS_FILTER_TEXT,
+	getAvailableStatuses,
+	getAvailableTags,
+	getEditableTags,
+	getFilteredTasks,
+	parseStatusFilter,
+	parseTagFilter
+} from "./tasks/task-filters";
 import { renderStatusFilter } from "./ui/status-filter";
 import { renderTaskCard } from "./ui/task-card";
 import { TaskFormModal } from "./ui/task-form-modal";
@@ -20,7 +29,7 @@ export class TaskAggregatorView extends ItemView {
 	private scoreError: string | null = null;
 	private cycles: string[][] = [];
 
-	private statusFilterText = "todo doing";
+	private statusFilterText = DEFAULT_STATUS_FILTER_TEXT;
 	private tagFilterText = "";
 	private tagSearchText = "";
 
@@ -110,7 +119,7 @@ export class TaskAggregatorView extends ItemView {
 		newTaskButton.addEventListener("click", () => {
 			new TaskFormModal(
 				this.plugin,
-				this.getEditableTags(),
+					getEditableTags(this.allTasks, this.tagGraph),
 				async (input) => {
 					await this.plugin.createTask(input);
 					await this.refresh();
@@ -167,11 +176,11 @@ export class TaskAggregatorView extends ItemView {
 	}
 
 	private renderStatusHints(container: HTMLElement): void {
-		const statuses = this.getAvailableStatuses();
+		const statuses = getAvailableStatuses(this.allTasks);
 
 		renderStatusFilter(container, {
 			statuses,
-			selectedStatuses: new Set(this.parseStatusFilter(this.statusFilterText)),
+			selectedStatuses: new Set(parseStatusFilter(this.statusFilterText)),
 			onChange: (selectedStatuses) => {
 				this.statusFilterText = selectedStatuses.join(" ");
 				this.render();
@@ -180,11 +189,11 @@ export class TaskAggregatorView extends ItemView {
 	}
 
 	private renderAvailableTagHints(container: HTMLElement): void {
-		const tags = this.getAvailableTags();
+		const tags = getAvailableTags(this.allTasks, this.tagGraph);
 
 		renderTagFilter(container, {
 			tags,
-			selectedTags: new Set(this.parseTagFilter(this.tagFilterText)),
+			selectedTags: new Set(parseTagFilter(this.tagFilterText)),
 			searchText: this.tagSearchText,
 			onSearchChange: (searchText) => {
 				this.tagSearchText = searchText;
@@ -222,7 +231,7 @@ export class TaskAggregatorView extends ItemView {
 					await this.plugin.openTaskSource(selectedTask);
 				},
 				filterTag: (tag) => {
-					const selectedTags = new Set(this.parseTagFilter(this.tagFilterText));
+					const selectedTags = new Set(parseTagFilter(this.tagFilterText));
 					selectedTags.add(this.normalizeTag(tag));
 					this.tagFilterText = [...selectedTags].join(" ");
 					this.render();
@@ -230,7 +239,7 @@ export class TaskAggregatorView extends ItemView {
 				editTask: (selectedTask) => {
 					new TaskFormModal(
 						this.plugin,
-						this.getEditableTags(),
+						getEditableTags(this.allTasks, this.tagGraph),
 						async (input) => {
 							await this.plugin.updateTask(selectedTask, input);
 							await this.refresh();
@@ -243,109 +252,16 @@ export class TaskAggregatorView extends ItemView {
 	}
 
 	private getFilteredTasks(): TaskItem[] {
-		const tagFilter = this.parseTagFilter(this.tagFilterText);
-		const statusFilter = this.parseStatusFilter(this.statusFilterText);
-
-		return this.allTasks.filter((task) => {
-			return this.matchesStatusFilter(task, statusFilter) && this.matchesTagFilter(task, tagFilter);
-		});
-	}
-
-	private matchesStatusFilter(task: TaskItem, statusFilter: string[]): boolean {
-		return statusFilter.length === 0 || statusFilter.includes(this.getTaskFilterStatus(task));
-	}
-
-	private matchesTagFilter(task: TaskItem, tagFilter: string[]): boolean {
-		if (tagFilter.length === 0) {
-			return true;
-		}
-
-		const taskTags = this.getTaskFilterTags(task);
-		const expandedFilters = tagFilter.map((tag) => this.tagGraph.expandDescendants(tag));
-
-		return expandedFilters.some((expandedFilter) =>
-			taskTags.some((taskTag) => expandedFilter.has(taskTag))
+		return getFilteredTasks(
+			this.allTasks,
+			this.tagGraph,
+			this.statusFilterText,
+			this.tagFilterText
 		);
-	}
-
-	private getAvailableStatuses(): string[] {
-		const statuses = new Set<string>();
-
-		for (const task of this.allTasks) {
-			statuses.add(this.getTaskFilterStatus(task));
-		}
-
-		return [...statuses].sort((a, b) => {
-			const orderDiff = STATUS_ORDER.indexOf(a) - STATUS_ORDER.indexOf(b);
-
-			return orderDiff !== 0 ? orderDiff : a.localeCompare(b);
-		});
-	}
-
-	private getAvailableTags(): string[] {
-		const tags = new Set<string>();
-
-		for (const task of this.allTasks) {
-			for (const tag of this.getTaskFilterTags(task)) {
-				tags.add(this.normalizeTag(tag));
-			}
-		}
-
-		return this.sortTags([...tags]);
-	}
-
-	private sortTags(tags: string[]): string[] {
-		return [...tags].sort((a, b) => {
-			const descendantDiff = this.getDescendantCount(b) - this.getDescendantCount(a);
-
-			return descendantDiff !== 0 ? descendantDiff : a.localeCompare(b);
-		});
-	}
-
-	private getEditableTags(): string[] {
-		const tags = new Set<string>(this.tagGraph.getAllTags());
-
-		for (const task of this.allTasks) {
-			for (const tag of task.tags) {
-				tags.add(this.normalizeTag(tag));
-			}
-		}
-
-		return this.sortTags([...tags]);
-	}
-
-	private parseTagFilter(value: string): string[] {
-		return value
-			.split(/[,\s]+/)
-			.map((tag) => this.normalizeTag(tag))
-			.filter((tag) => tag.length > 0);
-	}
-
-	private parseStatusFilter(value: string): string[] {
-		return value
-			.split(/\s+/)
-			.map((status) => status.trim())
-			.filter((status) => status.length > 0);
 	}
 
 	private normalizeTag(tag: string): string {
 		return normalizeTag(tag);
-	}
-
-	private getTaskFilterTags(task: TaskItem): string[] {
-		return (task.resolvedTags ?? task.tags).map((tag) => this.normalizeTag(tag));
-	}
-
-	private getDescendantCount(tag: string): number {
-		return Math.max(0, this.tagGraph.expandDescendants(tag).size - 1);
-	}
-
-	private getTaskFilterStatus(task: TaskItem): string {
-		if (task.status) {
-			return task.status;
-		}
-
-		return task.completed ? "done" : "todo";
 	}
 
 }
