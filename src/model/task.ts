@@ -1,9 +1,9 @@
 export type TaskItem = {
   title: string;
   status: string | null;
-  createdDate: string | null; // YYYY-MM-DD
+  createdDate: string; // YYYY-MM-DD
   dueDate: string | null;     // YYYY-MM-DD
-  priority: number | null;
+  priority: number;
   tags: string[];
   resolvedTags?: string[];
   description: string;

@@ -344,16 +344,16 @@ export class TaskAggregatorView extends ItemView {
 		const priorityInput = priorityControls.createEl("input");
 		const increasePriorityButton = priorityControls.createEl("button", { text: "+" });
 
-		decreasePriorityButton.disabled = (task.priority ?? 1) <= 1;
+		decreasePriorityButton.disabled = task.priority <= 1;
 		decreasePriorityButton.addEventListener("click", () => {
-			void this.plugin.updateTaskPriority(task, Math.max(1, (task.priority ?? 1) - 1))
+			void this.plugin.updateTaskPriority(task, Math.max(1, task.priority - 1))
 				.then(() => this.refresh());
 		});
 
 		priorityInput.type = "number";
 		priorityInput.min = "1";
 		priorityInput.required = true;
-		priorityInput.value = task.priority?.toString() ?? "1";
+		priorityInput.value = task.priority.toString();
 		priorityInput.addEventListener("change", () => {
 			const priority = Math.max(1, Math.floor(Number(priorityInput.value) || 1));
 
@@ -362,7 +362,7 @@ export class TaskAggregatorView extends ItemView {
 		});
 
 		increasePriorityButton.addEventListener("click", () => {
-			void this.plugin.updateTaskPriority(task, (task.priority ?? 1) + 1)
+			void this.plugin.updateTaskPriority(task, task.priority + 1)
 				.then(() => this.refresh());
 		});
 
@@ -552,7 +552,7 @@ class NewTaskModal extends Modal {
 			this.selectedTags = new Set(task.tags.map((tag) => normalizeTag(tag)));
 			this.titleText = task.title;
 			this.dueDate = task.dueDate ?? "";
-			this.priority = task.priority ?? 1;
+			this.priority = task.priority;
 			this.status = task.status ?? "";
 			this.description = task.description;
 		}

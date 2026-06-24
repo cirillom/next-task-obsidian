@@ -58,12 +58,12 @@ export function validateScoreScript(script: string): string | null {
 }
 
 function getScoreVariables(task: TaskItem, now: Date): ScoreVariables {
-	const priority = toFiniteNumber(task.priority, 0);
+	const priority = task.priority;
 
-	const createdDate = task.createdDate ? new Date(task.createdDate) : null;
+	const createdDate = new Date(task.createdDate);
 	const dueDate = task.dueDate ? new Date(task.dueDate) : null;
 
-	const createdTime = createdDate?.getTime() ?? NaN;
+	const createdTime = createdDate.getTime();
 	const dueTime = dueDate?.getTime() ?? NaN;
 
 	const ageDays = Number.isFinite(createdTime)
@@ -111,8 +111,4 @@ ${script}
 	// Keep the eval-like behavior isolated to this function.
 	// eslint-disable-next-line @typescript-eslint/no-implied-eval
 	return new Function("priority", "ageDays", "dueOffsetDays", source) as ScoreFunction;
-}
-
-function toFiniteNumber(value: unknown, fallback: number): number {
-	return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
