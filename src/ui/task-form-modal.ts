@@ -3,12 +3,10 @@ import type TaskAggregatorPlugin from "../main";
 import type { NewTaskInput } from "../main";
 import type { TaskItem } from "../model/task";
 import { normalizeTag } from "../model/tag-graph";
-import {
-	renderDueDateField,
-	renderPriorityStepper,
-	renderStatusSelectField,
-	renderTagSelector
-} from "./task-edit-controls";
+import { renderDueDateField } from "./due-date-field";
+import { renderPriorityStepper } from "./priority-stepper";
+import { renderStatusSelectField } from "./status-select";
+import { renderTagSelector } from "./tag-selector";
 
 export class TaskFormModal extends Modal {
 	private selectedTags = new Set<string>();
@@ -59,8 +57,11 @@ export class TaskFormModal extends Modal {
 		});
 
 		const meta = contentEl.createDiv({ cls: "task-aggregator-meta" });
-		renderDueDateField(meta, this.dueDate, (dueDate) => {
-			this.dueDate = dueDate;
+		renderDueDateField(meta, {
+			value: this.dueDate,
+			onChange: (dueDate) => {
+				this.dueDate = dueDate;
+			}
 		});
 		renderPriorityStepper(meta, this.priority, (priority) => {
 			this.priority = priority;

@@ -1,10 +1,8 @@
 import { App, Component, MarkdownRenderer, setIcon } from "obsidian";
 import type { TaskItem } from "../model/task";
-import {
-	renderDueDateField,
-	renderPriorityStepper,
-	renderStatusSelectField
-} from "./task-edit-controls";
+import { renderDueDateField } from "./due-date-field";
+import { renderPriorityStepper } from "./priority-stepper";
+import { renderStatusSelectField } from "./status-select";
 
 type TaskCardCallbacks = {
 	updateCompleted: (task: TaskItem, completed: boolean) => Promise<void>;
@@ -58,16 +56,14 @@ export function renderTaskCard(
 	});
 
 	const meta = card.createDiv({ cls: "task-aggregator-meta" });
-	renderDueDateField(
-		meta,
-		task.dueDate ?? "",
-		() => undefined,
-		(dueDate) => {
+	renderDueDateField(meta, {
+		value: task.dueDate ?? "",
+		onCommit: (dueDate) => {
 			if ((task.dueDate ?? "") !== dueDate) {
 				void options.callbacks.updateDueDate(task, dueDate || null);
 			}
 		}
-	);
+	});
 	renderPriorityStepper(meta, task.priority, (priority) => {
 		void options.callbacks.updatePriority(task, priority);
 	});
