@@ -116,14 +116,6 @@ export class TaskAggregatorView extends ItemView {
 			void this.refresh();
 		});
 
-		const resetButton = buttons.createEl("button", { text: "Reset filters" });
-		resetButton.addEventListener("click", () => {
-			this.statusFilter = ALL_STATUSES;
-			this.tagFilterText = "";
-			this.tagSearchText = "";
-			this.render();
-		});
-
 		this.renderConfigStatus(container);
 		this.renderAvailableTagHints(container);
 	}
