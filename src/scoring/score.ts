@@ -8,6 +8,10 @@ export function scoreTask(
 	now = new Date(),
 	formula = DEFAULT_SCORE_FORMULA
 ): number {
+	if (task.completed) {
+		return 0;
+	}
+
 	const variables = getScoreVariables(task, now);
 
 	try {
