@@ -23,6 +23,7 @@ export class TaskFormModal extends Modal {
 	constructor(
 		private readonly plugin: TaskAggregatorPlugin,
 		availableTags: string[],
+		private readonly statuses: string[],
 		private readonly onSave: (input: NewTaskInput) => Promise<void>,
 		private readonly task?: TaskItem
 	) {
@@ -64,7 +65,7 @@ export class TaskFormModal extends Modal {
 		renderPriorityStepper(meta, this.priority, (priority) => {
 			this.priority = priority;
 		});
-		renderStatusSelectField(meta, this.status, (status) => {
+		renderStatusSelectField(meta, this.status, this.statuses, (status) => {
 			this.status = status;
 		});
 

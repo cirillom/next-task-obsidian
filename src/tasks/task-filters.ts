@@ -1,35 +1,41 @@
-import { STATUS_ORDER } from "../constants";
 import type { TaskItem } from "../model/task";
 import { normalizeTag, TagGraph } from "../model/tag-graph";
+import {
+	DEFAULT_STATUS_DEFINITIONS,
+	getDefaultStatusFilterText,
+	getTaskFilterStatus,
+	sortStatuses,
+} from "../model/task-status";
 
-export const DEFAULT_STATUS_FILTER_TEXT = "todo doing";
+export const DEFAULT_STATUS_FILTER_TEXT = getDefaultStatusFilterText(DEFAULT_STATUS_DEFINITIONS);
 
 export function getFilteredTasks(
 	tasks: TaskItem[],
 	tagGraph: TagGraph,
 	statusFilterText: string,
-	tagFilterText: string
+	tagFilterText: string,
+	statusDefinitions = DEFAULT_STATUS_DEFINITIONS
 ): TaskItem[] {
 	const tagFilter = parseTagFilter(tagFilterText);
 	const statusFilter = parseStatusFilter(statusFilterText);
 
 	return tasks.filter((task) => {
-		return matchesStatusFilter(task, statusFilter) && matchesTagFilter(task, tagGraph, tagFilter);
+		return matchesStatusFilter(task, statusFilter) &&
+			matchesTagFilter(task, tagGraph, tagFilter);
 	});
 }
 
-export function getAvailableStatuses(tasks: TaskItem[]): string[] {
+export function getAvailableStatuses(
+	tasks: TaskItem[],
+	statusDefinitions = DEFAULT_STATUS_DEFINITIONS
+): string[] {
 	const statuses = new Set<string>();
 
 	for (const task of tasks) {
 		statuses.add(getTaskFilterStatus(task));
 	}
 
-	return [...statuses].sort((a, b) => {
-		const orderDiff = STATUS_ORDER.indexOf(a) - STATUS_ORDER.indexOf(b);
-
-		return orderDiff !== 0 ? orderDiff : a.localeCompare(b);
-	});
+	return sortStatuses([...statuses], statusDefinitions);
 }
 
 export function getAvailableTags(tasks: TaskItem[], tagGraph: TagGraph): string[] {
@@ -70,16 +76,8 @@ export function parseStatusFilter(value: string): string[] {
 		.filter((status) => status.length > 0);
 }
 
-export function getTaskFilterStatus(task: TaskItem): string {
-	if (task.status) {
-		return task.status;
-	}
-
-	return task.completed ? "done" : "todo";
-}
-
 function matchesStatusFilter(task: TaskItem, statusFilter: string[]): boolean {
-	return statusFilter.length === 0 || statusFilter.includes(getTaskFilterStatus(task));
+	return statusFilter.includes(getTaskFilterStatus(task));
 }
 
 function matchesTagFilter(task: TaskItem, tagGraph: TagGraph, tagFilter: string[]): boolean {

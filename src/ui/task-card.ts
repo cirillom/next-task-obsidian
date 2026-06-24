@@ -19,6 +19,7 @@ type TaskCardCallbacks = {
 export type TaskCardOptions = {
 	app: App;
 	component: Component;
+	statuses: string[];
 	callbacks: TaskCardCallbacks;
 };
 
@@ -70,7 +71,7 @@ export function renderTaskCard(
 	renderPriorityStepper(meta, task.priority, (priority) => {
 		void options.callbacks.updatePriority(task, priority);
 	});
-	renderStatusSelectField(meta, task.status ?? "", (status) => {
+	renderStatusSelectField(meta, task.status ?? "", options.statuses, (status) => {
 		void options.callbacks.updateStatus(task, status || null);
 	});
 	renderTags(card, task, options.callbacks.filterTag);

@@ -1,4 +1,10 @@
 import type { TaskItem } from "../model/task";
+import {
+	DEFAULT_STATUS_DEFINITIONS,
+	getStatusScoreValue,
+	getTaskFilterStatus,
+	type TaskStatusDefinition
+} from "../model/task-status";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -6,12 +12,14 @@ export type ScoreVariables = {
 	priority: number;
 	ageDays: number;
 	dueOffsetDays: number;
+	statusValue: number;
 };
 
 type ScoreFunction = (
 	priority: number,
 	ageDays: number,
-	dueOffsetDays: number
+	dueOffsetDays: number,
+	statusValue: number
 ) => unknown;
 
 export const DEFAULT_SCORE_SCRIPT = `
@@ -27,13 +35,14 @@ return priority * 20 + ageDays * 1.5 + dueBonus;
 export function scoreTask(
 	task: TaskItem,
 	now = new Date(),
-	script = DEFAULT_SCORE_SCRIPT
+	script = DEFAULT_SCORE_SCRIPT,
+	statusDefinitions = DEFAULT_STATUS_DEFINITIONS
 ): number {
 	if (task.completed) {
 		return 0;
 	}
 
-	const variables = getScoreVariables(task, now);
+	const variables = getScoreVariables(task, now, statusDefinitions);
 
 	try {
 		return evaluateScoreScript(script, variables);
@@ -48,7 +57,8 @@ export function validateScoreScript(script: string): string | null {
 		evaluateScoreScript(script, {
 			priority: 1,
 			ageDays: 0,
-			dueOffsetDays: 0
+			dueOffsetDays: 0,
+			statusValue: 0
 		});
 
 		return null;
@@ -57,7 +67,11 @@ export function validateScoreScript(script: string): string | null {
 	}
 }
 
-function getScoreVariables(task: TaskItem, now: Date): ScoreVariables {
+function getScoreVariables(
+	task: TaskItem,
+	now: Date,
+	statusDefinitions: TaskStatusDefinition[]
+): ScoreVariables {
 	const priority = task.priority;
 
 	const createdDate = new Date(task.createdDate);
@@ -80,7 +94,8 @@ function getScoreVariables(task: TaskItem, now: Date): ScoreVariables {
 	return {
 		priority,
 		ageDays,
-		dueOffsetDays
+		dueOffsetDays,
+		statusValue: getStatusScoreValue(getTaskFilterStatus(task), statusDefinitions)
 	};
 }
 
@@ -90,7 +105,8 @@ function evaluateScoreScript(script: string, variables: ScoreVariables): number 
 	const result = scoreFunction(
 		variables.priority,
 		variables.ageDays,
-		variables.dueOffsetDays
+		variables.dueOffsetDays,
+		variables.statusValue
 	);
 
 	if (typeof result !== "number" || !Number.isFinite(result)) {
@@ -110,5 +126,5 @@ ${script}
 	// This is intentional: the score script is user-provided JavaScript from the config file.
 	// Keep the eval-like behavior isolated to this function.
 	// eslint-disable-next-line @typescript-eslint/no-implied-eval
-	return new Function("priority", "ageDays", "dueOffsetDays", source) as ScoreFunction;
+	return new Function("priority", "ageDays", "dueOffsetDays", "statusValue", source) as ScoreFunction;
 }

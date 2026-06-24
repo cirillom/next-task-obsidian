@@ -1,6 +1,7 @@
 import { App, MarkdownView, Notice, TFile } from "obsidian";
 import { CONFIG_FILE_PATH, TASKS_FILE_PATH } from "../constants";
 import type { TaskItem } from "../model/task";
+import { DEFAULT_STATUS_DEFINITIONS } from "../model/task-status";
 import { normalizeTag, TagGraph } from "../model/tag-graph";
 import { parseTasksFromMarkdown } from "../parser/task-parser";
 import { DEFAULT_SCORE_SCRIPT, scoreTask } from "../scoring/score";
@@ -20,7 +21,8 @@ export class TaskRepository {
 
 	async loadTasks(
 		scoreScript = DEFAULT_SCORE_SCRIPT,
-		tagGraph = new TagGraph()
+		tagGraph = new TagGraph(),
+		statusDefinitions = DEFAULT_STATUS_DEFINITIONS
 	): Promise<TaskItem[]> {
 		const files = this.app.vault
 			.getMarkdownFiles()
@@ -34,7 +36,7 @@ export class TaskRepository {
 
 			for (const task of tasks) {
 				task.resolvedTags = this.expandTaskTags(task.tags, tagGraph);
-				task.score = scoreTask(task, new Date(), scoreScript);
+				task.score = scoreTask(task, new Date(), scoreScript, statusDefinitions);
 				allTasks.push(task);
 			}
 

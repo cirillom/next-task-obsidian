@@ -4,6 +4,11 @@ import type TaskAggregatorPlugin from "./main";
 import type { TaskItem } from "./model/task";
 import { TagGraph, normalizeTag } from "./model/tag-graph";
 import {
+	DEFAULT_STATUS_DEFINITIONS,
+	getDefaultStatusFilterText,
+	getWritableStatuses
+} from "./model/task-status";
+import {
 	DEFAULT_STATUS_FILTER_TEXT,
 	getAvailableStatuses,
 	getAvailableTags,
@@ -28,6 +33,8 @@ export class TaskAggregatorView extends ItemView {
 	private configError: string | null = null;
 	private scoreError: string | null = null;
 	private cycles: string[][] = [];
+	private statusDefinitions = DEFAULT_STATUS_DEFINITIONS;
+	private didApplyDefaultStatusFilter = false;
 
 	private statusFilterText = DEFAULT_STATUS_FILTER_TEXT;
 	private tagFilterText = "";
@@ -62,6 +69,13 @@ export class TaskAggregatorView extends ItemView {
 		this.configError = data.configError;
 		this.scoreError = data.scoreError;
 		this.cycles = data.cycles;
+		this.statusDefinitions = data.statusDefinitions;
+
+		if (!this.didApplyDefaultStatusFilter) {
+			this.statusFilterText = getDefaultStatusFilterText(this.statusDefinitions);
+			this.didApplyDefaultStatusFilter = true;
+		}
+
 		this.render();
 	}
 
@@ -119,7 +133,8 @@ export class TaskAggregatorView extends ItemView {
 		newTaskButton.addEventListener("click", () => {
 			new TaskFormModal(
 				this.plugin,
-					getEditableTags(this.allTasks, this.tagGraph),
+				getEditableTags(this.allTasks, this.tagGraph),
+				this.getWritableStatuses(),
 				async (input) => {
 					await this.plugin.createTask(input);
 					await this.refresh();
@@ -176,7 +191,7 @@ export class TaskAggregatorView extends ItemView {
 	}
 
 	private renderStatusHints(container: HTMLElement): void {
-		const statuses = getAvailableStatuses(this.allTasks);
+		const statuses = getAvailableStatuses(this.allTasks, this.statusDefinitions);
 
 		renderStatusFilter(container, {
 			statuses,
@@ -210,6 +225,7 @@ export class TaskAggregatorView extends ItemView {
 		renderTaskCard(parent, task, {
 			app: this.plugin.app,
 			component: this,
+			statuses: this.getWritableStatuses(),
 			callbacks: {
 				updateCompleted: async (selectedTask, completed) => {
 					await this.plugin.updateTaskCompleted(selectedTask, completed);
@@ -240,6 +256,7 @@ export class TaskAggregatorView extends ItemView {
 					new TaskFormModal(
 						this.plugin,
 						getEditableTags(this.allTasks, this.tagGraph),
+						this.getWritableStatuses(),
 						async (input) => {
 							await this.plugin.updateTask(selectedTask, input);
 							await this.refresh();
@@ -256,12 +273,17 @@ export class TaskAggregatorView extends ItemView {
 			this.allTasks,
 			this.tagGraph,
 			this.statusFilterText,
-			this.tagFilterText
+			this.tagFilterText,
+			this.statusDefinitions
 		);
 	}
 
 	private normalizeTag(tag: string): string {
 		return normalizeTag(tag);
+	}
+
+	private getWritableStatuses(): string[] {
+		return getWritableStatuses(this.statusDefinitions);
 	}
 
 }

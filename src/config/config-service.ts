@@ -1,12 +1,15 @@
 import { App, MarkdownView, TFile } from "obsidian";
 import { CONFIG_FILE_PATH } from "../constants";
 import { normalizeTag, TagGraph } from "../model/tag-graph";
+import { DEFAULT_STATUS_DEFINITIONS } from "../model/task-status";
+import type { TaskStatusDefinition } from "../model/task-status";
 import { parseTaskConfig } from "../parser/config-parser";
 import { validateScoreScript } from "../scoring/score";
 import taskConfigTemplate from "../templates/Tasks-Config.md";
 
 export type ConfigLoadResult = {
 	tagGraph: TagGraph;
+	statusDefinitions: TaskStatusDefinition[];
 	scoreScript: string | null;
 	scoreError: string | null;
 	status: "loaded" | "missing" | "error";
@@ -22,6 +25,7 @@ export class ConfigService {
 		if (!(configFile instanceof TFile)) {
 			return {
 				tagGraph: new TagGraph(),
+				statusDefinitions: DEFAULT_STATUS_DEFINITIONS,
 				scoreScript: null,
 				scoreError: null,
 				status: "missing",
@@ -35,6 +39,7 @@ export class ConfigService {
 
 			return {
 				tagGraph: config.tagGraph,
+				statusDefinitions: config.statusDefinitions,
 				scoreScript: config.scoreScript,
 				scoreError: config.scoreScript ? validateScoreScript(config.scoreScript) : null,
 				status: "loaded",
@@ -45,6 +50,7 @@ export class ConfigService {
 
 			return {
 				tagGraph: new TagGraph(),
+				statusDefinitions: DEFAULT_STATUS_DEFINITIONS,
 				scoreScript: null,
 				scoreError: null,
 				status: "error",

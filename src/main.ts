@@ -1,5 +1,6 @@
 import { Notice, Plugin } from "obsidian";
 import type { TaskItem } from "./model/task";
+import type { TaskStatusDefinition } from "./model/task-status";
 import { DEFAULT_SCORE_SCRIPT } from "./scoring/score";
 import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
 import { TagGraph } from "./model/tag-graph";
@@ -14,6 +15,7 @@ export type { NewTaskInput };
 export type TaskAggregatorData = {
 	tasks: TaskItem[];
 	tagGraph: TagGraph;
+	statusDefinitions: TaskStatusDefinition[];
 	configStatus: "loaded" | "missing" | "error";
 	configError: string | null;
 	scoreError: string | null;
@@ -75,21 +77,24 @@ export default class TaskAggregatorPlugin extends Plugin {
 
 	async loadTasks(
 		scoreScript = DEFAULT_SCORE_SCRIPT,
-		tagGraph = new TagGraph()
+		tagGraph = new TagGraph(),
+		statusDefinitions?: TaskStatusDefinition[]
 	): Promise<TaskItem[]> {
-		return this.taskRepository.loadTasks(scoreScript, tagGraph);
+		return this.taskRepository.loadTasks(scoreScript, tagGraph, statusDefinitions);
 	}
 
 	async loadTaskAggregatorData(): Promise<TaskAggregatorData> {
 		const configResult = await this.configService.loadConfig();
 		const tasks = await this.loadTasks(
 			configResult.scoreScript ?? DEFAULT_SCORE_SCRIPT,
-			configResult.tagGraph
+			configResult.tagGraph,
+			configResult.statusDefinitions
 		);
 
 		return {
 			tasks,
 			tagGraph: configResult.tagGraph,
+			statusDefinitions: configResult.statusDefinitions,
 			configStatus: configResult.status,
 			configError: configResult.error,
 			scoreError: configResult.scoreError,

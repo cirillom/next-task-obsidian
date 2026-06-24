@@ -1,4 +1,3 @@
-import { EDITABLE_STATUSES } from "../constants";
 import { normalizeTag } from "../model/tag-graph";
 
 export function normalizePriority(value: string | number): number {
@@ -79,6 +78,7 @@ export function renderPriorityStepper(
 export function renderStatusSelectField(
 	parent: HTMLElement,
 	value: string,
+	statuses: string[],
 	onChange: (status: string) => void
 ): HTMLSelectElement {
 	const statusField = parent.createDiv({ cls: "task-aggregator-field" });
@@ -87,7 +87,7 @@ export function renderStatusSelectField(
 	const statusSelect = statusField.createEl("select");
 	addOption(statusSelect, "", "");
 
-	for (const status of EDITABLE_STATUSES) {
+	for (const status of statuses) {
 		addOption(statusSelect, status, status);
 	}
 
