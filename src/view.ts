@@ -116,13 +116,17 @@ export class TaskAggregatorView extends ItemView {
 		const tagGroup = controls.createDiv({ cls: "task-aggregator-control-group" });
 		tagGroup.createEl("label", { text: "Tags" });
 
-		const tagInput = tagGroup.createEl("input");
-		tagInput.type = "text";
-		tagInput.placeholder = "#Tag";
-		tagInput.value = this.tagFilterText;
+		const tagSelect = tagGroup.createEl("select");
+		this.addOption(tagSelect, "", "All tags");
 
-		tagInput.addEventListener("input", () => {
-			this.tagFilterText = tagInput.value;
+		for (const tag of this.getAvailableTags()) {
+			this.addOption(tagSelect, tag, `#${tag}`);
+		}
+
+		tagSelect.value = this.parseTagFilter(this.tagFilterText)[0] ?? "";
+
+		tagSelect.addEventListener("change", () => {
+			this.tagFilterText = tagSelect.value;
 			this.render();
 		});
 
