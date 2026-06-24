@@ -1,7 +1,7 @@
 import { MarkdownView, Notice, Plugin, TFile } from "obsidian";
 import { parseTasksFromMarkdown } from "./parser/task-parser";
 import type { TaskItem } from "./model/task";
-import { DEFAULT_SCORE_FORMULA, scoreTask } from "./scoring/score";
+import { DEFAULT_SCORE_FORMULA, scoreTask, validateScoreFormula } from "./scoring/score";
 import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
 import { parseTaskConfig } from "./parser/config-parser";
 import { TagGraph, normalizeTag } from "./model/tag-graph";
@@ -25,6 +25,7 @@ export type TaskAggregatorData = {
 	tagGraph: TagGraph;
 	configStatus: "loaded" | "missing" | "error";
 	configError: string | null;
+	scoreError: string | null;
 	cycles: string[][];
 };
 
@@ -125,6 +126,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 			tagGraph: configResult.tagGraph,
 			configStatus: configResult.status,
 			configError: configResult.error,
+			scoreError: configResult.scoreError,
 			cycles: configResult.tagGraph.detectCycles()
 		};
 	}
@@ -411,6 +413,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	private async loadConfig(): Promise<{
 		tagGraph: TagGraph;
 		scoreFormula: string | null;
+		scoreError: string | null;
 		status: TaskAggregatorData["configStatus"];
 		error: string | null;
 	}> {
@@ -420,6 +423,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 			return {
 				tagGraph: new TagGraph(),
 				scoreFormula: null,
+				scoreError: null,
 				status: "missing",
 				error: null
 			};
@@ -432,6 +436,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 			return {
 				tagGraph: config.tagGraph,
 				scoreFormula: config.scoreFormula,
+				scoreError: config.scoreFormula ? validateScoreFormula(config.scoreFormula) : null,
 				status: "loaded",
 				error: null
 			};
@@ -441,6 +446,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 			return {
 				tagGraph: new TagGraph(),
 				scoreFormula: null,
+				scoreError: null,
 				status: "error",
 				error: error instanceof Error ? error.message : "Unknown error"
 			};

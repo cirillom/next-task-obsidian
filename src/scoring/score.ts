@@ -23,6 +23,19 @@ export function scoreTask(
 	}
 }
 
+export function validateScoreFormula(formula: string): string | null {
+	try {
+		evaluateScoreScript(formula, {
+			ageDays: 0,
+			dueOffsetDays: 0,
+			priority: 1
+		});
+		return null;
+	} catch (error) {
+		return error instanceof Error ? error.message : "Invalid score formula";
+	}
+}
+
 function getScoreVariables(task: TaskItem, now: Date): ScoreVariables {
 	const priority = task.priority ?? 0;
 
@@ -42,6 +55,10 @@ function getScoreVariables(task: TaskItem, now: Date): ScoreVariables {
 }
 
 type ScoreVariables = Record<string, number>;
+type ScriptLine = {
+	text: string;
+	line: number;
+};
 
 const TOKEN = /\s*([A-Za-z][A-Za-z0-9_]*|\d+(?:\.\d+)?|[()+\-*/])/gy;
 const PRECEDENCE: Record<string, number> = {
@@ -55,8 +72,8 @@ function evaluateScoreScript(script: string, variables: ScoreVariables): number 
 	const scriptLines = getScriptLines(script);
 	const values = { ...variables };
 
-	if (scriptLines.length === 1 && !scriptLines[0]?.includes("=")) {
-		return evaluateExpression(scriptLines[0] ?? "", values);
+	if (scriptLines.length === 1 && !scriptLines[0]?.text.includes("=")) {
+		return evaluateExpression(scriptLines[0]?.text ?? "", values);
 	}
 
 	executeLines(scriptLines, values, 0, scriptLines.length);
@@ -70,25 +87,29 @@ function evaluateScoreScript(script: string, variables: ScoreVariables): number 
 	return score;
 }
 
-function executeLines(lines: string[], variables: ScoreVariables, start: number, end: number): void {
+function executeLines(lines: ScriptLine[], variables: ScoreVariables, start: number, end: number): void {
 	let i = start;
 
 	while (i < end) {
-		const line = lines[i] ?? "";
+		const line = lines[i];
 
-		if (line.startsWith("if ")) {
+		if (!line) {
+			throw new Error("Invalid score formula");
+		}
+
+		if (line.text.startsWith("if ")) {
 			i = executeIf(lines, variables, i);
 			continue;
 		}
 
-		if (line.startsWith("else")) {
+		if (line.text.startsWith("else")) {
 			return;
 		}
 
-		const assignment = line.match(/^([A-Za-z][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+		const assignment = line.text.match(/^([A-Za-z][A-Za-z0-9_]*)\s*=\s*(.+)$/);
 
 		if (!assignment) {
-			throw new Error("Invalid score formula");
+			throw new Error(`Invalid score formula on line ${line.line}: ${line.text}`);
 		}
 
 		const name = assignment[1];
@@ -98,28 +119,38 @@ function executeLines(lines: string[], variables: ScoreVariables, start: number,
 			throw new Error("Invalid score formula");
 		}
 
-		variables[name] = evaluateExpression(expression, variables);
+		try {
+			variables[name] = evaluateExpression(expression, variables);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Invalid expression";
+			throw new Error(`Invalid score formula on line ${line.line}: ${message}`);
+		}
 		i++;
 	}
 }
 
-function executeIf(lines: string[], variables: ScoreVariables, start: number): number {
+function executeIf(lines: ScriptLine[], variables: ScoreVariables, start: number): number {
 	let i = start;
 	let didRun = false;
 
 	while (i < lines.length) {
-		const line = lines[i] ?? "";
+		const line = lines[i];
+
+		if (!line) {
+			throw new Error("Invalid score formula");
+		}
+
 		const block = findBlock(lines, i);
 		const condition = getCondition(line);
 
-		if (!didRun && (condition === null || evaluateCondition(condition, variables))) {
+		if (!didRun && (condition === null || evaluateCondition(condition, variables, line.line))) {
 			executeLines(lines, variables, block.start, block.end);
 			didRun = true;
 		}
 
 		i = block.end + 1;
 
-		if (!lines[i]?.startsWith("else")) {
+		if (!lines[i]?.text.startsWith("else")) {
 			return i;
 		}
 	}
@@ -127,9 +158,9 @@ function executeIf(lines: string[], variables: ScoreVariables, start: number): n
 	return i;
 }
 
-function getCondition(line: string): string | null {
-	const ifMatch = line.match(/^if\s+(.+)\s*\{\s*$/);
-	const elseIfMatch = line.match(/^else\s+if\s+(.+)\s*\{\s*$/);
+function getCondition(line: ScriptLine): string | null {
+	const ifMatch = line.text.match(/^if\s+(.+)\s*\{\s*$/);
+	const elseIfMatch = line.text.match(/^else\s+if\s+(.+)\s*\{\s*$/);
 
 	if (ifMatch) {
 		return ifMatch[1] ?? "";
@@ -139,43 +170,48 @@ function getCondition(line: string): string | null {
 		return elseIfMatch[1] ?? "";
 	}
 
-	if (/^else\s*\{\s*$/.test(line)) {
+	if (/^else\s*\{\s*$/.test(line.text)) {
 		return null;
 	}
 
-	throw new Error("Invalid score formula");
+	throw new Error(`Invalid score formula on line ${line.line}: ${line.text}`);
 }
 
-function evaluateCondition(condition: string, variables: ScoreVariables): boolean {
+function evaluateCondition(condition: string, variables: ScoreVariables, line: number): boolean {
 	const match = condition.match(/^(.+?)\s*(<=|>=|==|!=|<|>)\s*(.+)$/);
 
-	if (!match) {
-		return evaluateExpression(condition, variables) !== 0;
+	try {
+		if (!match) {
+			return evaluateExpression(condition, variables) !== 0;
+		}
+
+		const left = evaluateExpression(match[1] ?? "", variables);
+		const operator = match[2];
+		const right = evaluateExpression(match[3] ?? "", variables);
+
+		if (operator === "<") return left < right;
+		if (operator === ">") return left > right;
+		if (operator === "<=") return left <= right;
+		if (operator === ">=") return left >= right;
+		if (operator === "==") return left === right;
+		if (operator === "!=") return left !== right;
+	} catch (error) {
+		const message = error instanceof Error ? error.message : "Invalid condition";
+		throw new Error(`Invalid score formula on line ${line}: ${message}`);
 	}
-
-	const left = evaluateExpression(match[1] ?? "", variables);
-	const operator = match[2];
-	const right = evaluateExpression(match[3] ?? "", variables);
-
-	if (operator === "<") return left < right;
-	if (operator === ">") return left > right;
-	if (operator === "<=") return left <= right;
-	if (operator === ">=") return left >= right;
-	if (operator === "==") return left === right;
-	if (operator === "!=") return left !== right;
 
 	throw new Error("Invalid score formula");
 }
 
-function findBlock(lines: string[], start: number): { start: number; end: number } {
-	if (!lines[start]?.endsWith("{")) {
+function findBlock(lines: ScriptLine[], start: number): { start: number; end: number } {
+	if (!lines[start]?.text.endsWith("{")) {
 		throw new Error("Invalid score formula");
 	}
 
 	let depth = 1;
 
 	for (let i = start + 1; i < lines.length; i++) {
-		const line = lines[i] ?? "";
+		const line = lines[i]?.text ?? "";
 
 		if (line.endsWith("{")) {
 			depth++;
@@ -196,23 +232,26 @@ function findBlock(lines: string[], start: number): { start: number; end: number
 	throw new Error("Invalid score formula");
 }
 
-function getScriptLines(script: string): string[] {
-	const lines: string[] = [];
+function getScriptLines(script: string): ScriptLine[] {
+	const lines: ScriptLine[] = [];
+	const rawLines = script.split(/\r?\n/);
 
-	for (const rawLine of script.split(/\r?\n/)) {
+	for (let i = 0; i < rawLines.length; i++) {
+		const rawLine = rawLines[i] ?? "";
 		const line = rawLine.trim();
+		const lineNumber = i + 1;
 
 		if (line.length === 0 || line.startsWith("#") || line.startsWith("//")) {
 			continue;
 		}
 
 		if (line.startsWith("} else")) {
-			lines.push("}");
-			lines.push(line.slice(2).trim());
+			lines.push({ text: "}", line: lineNumber });
+			lines.push({ text: line.slice(2).trim(), line: lineNumber });
 			continue;
 		}
 
-		lines.push(line);
+		lines.push({ text: line, line: lineNumber });
 	}
 
 	return lines;

@@ -16,6 +16,7 @@ export class TaskAggregatorView extends ItemView {
 	private tagGraph = new TagGraph();
 	private configStatus: "loaded" | "missing" | "error" = "missing";
 	private configError: string | null = null;
+	private scoreError: string | null = null;
 	private cycles: string[][] = [];
 
 	private statusFilterText = "";
@@ -49,6 +50,7 @@ export class TaskAggregatorView extends ItemView {
 		this.tagGraph = data.tagGraph;
 		this.configStatus = data.configStatus;
 		this.configError = data.configError;
+		this.scoreError = data.scoreError;
 		this.cycles = data.cycles;
 		this.render();
 	}
@@ -73,6 +75,7 @@ export class TaskAggregatorView extends ItemView {
 		});
 
 		this.renderCycleWarnings(container);
+		this.renderScoreWarning(container);
 		this.renderControls(container);
 
 		const filteredTasks = this.getFilteredTasks();
@@ -148,6 +151,18 @@ export class TaskAggregatorView extends ItemView {
 		for (const cycle of this.cycles) {
 			list.createEl("li", { text: cycle.join(" -> ") });
 		}
+	}
+
+	private renderScoreWarning(container: HTMLElement): void {
+		if (!this.scoreError) {
+			return;
+		}
+
+		const warning = container.createDiv({ cls: "task-aggregator-warning" });
+		warning.createEl("strong", { text: "Score calculation error" });
+		warning.createEl("p", {
+			text: `Scores are not being calculated from Tasks-Config.md. Using the default score instead. ${this.scoreError}`
+		});
 	}
 
 	private renderStatusHints(container: HTMLElement): void {
