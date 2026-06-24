@@ -3,8 +3,12 @@ import type TaskAggregatorPlugin from "../main";
 import type { NewTaskInput } from "../main";
 import type { TaskItem } from "../model/task";
 import { normalizeTag } from "../model/tag-graph";
-
-const EDITABLE_STATUSES = ["doing", "blocked"] as const;
+import {
+	renderDueDateField,
+	renderPriorityStepper,
+	renderStatusSelectField,
+	renderTagSelector
+} from "./task-edit-controls";
 
 export class TaskFormModal extends Modal {
 	private selectedTags = new Set<string>();
@@ -54,82 +58,37 @@ export class TaskFormModal extends Modal {
 		});
 
 		const meta = contentEl.createDiv({ cls: "task-aggregator-meta" });
-		const dueDateField = meta.createDiv({ cls: "task-aggregator-field" });
-		dueDateField.createSpan({ text: "Due date", cls: "task-aggregator-field-label" });
-		const dueDateInput = dueDateField.createEl("input");
-		dueDateInput.type = "date";
-		dueDateInput.value = this.dueDate;
-		dueDateInput.addEventListener("change", () => {
-			this.dueDate = dueDateInput.value;
+		renderDueDateField(meta, this.dueDate, (dueDate) => {
+			this.dueDate = dueDate;
+		});
+		renderPriorityStepper(meta, this.priority, (priority) => {
+			this.priority = priority;
+		});
+		renderStatusSelectField(meta, this.status, (status) => {
+			this.status = status;
 		});
 
-		const priorityField = meta.createDiv({ cls: "task-aggregator-field" });
-		priorityField.createSpan({ text: "Priority", cls: "task-aggregator-field-label" });
-		const priorityInput = priorityField.createEl("input");
-		priorityInput.type = "number";
-		priorityInput.min = "1";
-		priorityInput.value = this.priority.toString();
-		priorityInput.addEventListener("change", () => {
-			this.priority = Math.max(1, Math.floor(Number(priorityInput.value) || 1));
-		});
-
-		const statusField = meta.createDiv({ cls: "task-aggregator-field" });
-		statusField.createSpan({ text: "Status", cls: "task-aggregator-field-label" });
-		const statusSelect = statusField.createEl("select");
-		this.addOption(statusSelect, "", "");
-
-		for (const status of EDITABLE_STATUSES) {
-			this.addOption(statusSelect, status, status);
-		}
-
-		statusSelect.value = this.status;
-		statusSelect.addEventListener("change", () => {
-			this.status = statusSelect.value;
-		});
-
-		const tags = contentEl.createDiv({ cls: "task-aggregator-tag-hint-list task-aggregator-modal-tag-list" });
-		const searchInput = tags.createEl("input", { cls: "task-aggregator-tag-search" });
-		searchInput.type = "search";
-		searchInput.placeholder = "Search tags";
-		searchInput.value = this.tagSearchText;
-		searchInput.setSelectionRange(this.tagSearchText.length, this.tagSearchText.length);
-		searchInput.focus();
-		searchInput.addEventListener("input", () => {
-			this.tagSearchText = searchInput.value;
-			this.render();
-		});
-
-		const visibleTags = this.availableTags.filter((tag) => tag.includes(normalizeTag(this.tagSearchText)));
-
-		if (visibleTags.length === 0 && normalizeTag(this.tagSearchText).length > 0) {
-			const createTagButton = tags.createEl("button", {
-				text: `Create #${normalizeTag(this.tagSearchText)}`,
-				cls: "task-aggregator-tag-hint"
-			});
-			createTagButton.addEventListener("click", () => {
+		renderTagSelector(contentEl, {
+			availableTags: this.availableTags,
+			selectedTags: this.selectedTags,
+			searchText: this.tagSearchText,
+			onSearchChange: (searchText) => {
+				this.tagSearchText = searchText;
+				this.render();
+			},
+			onCreateTag: () => {
 				void this.addNewTag();
-			});
-		}
-
-		for (const tag of visibleTags) {
-			const isSelected = this.selectedTags.has(tag);
-			const button = tags.createEl("button", {
-				text: `#${tag}`,
-				cls: isSelected
-					? "task-aggregator-tag-hint task-aggregator-tag-hint-selected"
-					: "task-aggregator-tag-hint"
-			});
-
-			button.addEventListener("click", () => {
-				if (isSelected) {
+			},
+			onToggleTag: (tag) => {
+				if (this.selectedTags.has(tag)) {
 					this.selectedTags.delete(tag);
 				} else {
 					this.selectedTags.add(tag);
 				}
 
 				this.render();
-			});
-		}
+			}
+		});
 
 		const descriptionField = contentEl.createDiv({ cls: "task-aggregator-field task-aggregator-new-task-description" });
 		descriptionField.createSpan({ text: "Description", cls: "task-aggregator-field-label" });
@@ -151,11 +110,6 @@ export class TaskFormModal extends Modal {
 				description: this.description
 			}).then(() => this.close());
 		});
-	}
-
-	private addOption(select: HTMLSelectElement, value: string, text: string): void {
-		const option = select.createEl("option", { text });
-		option.value = value;
 	}
 
 	private async addNewTag(): Promise<void> {
