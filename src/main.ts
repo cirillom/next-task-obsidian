@@ -193,6 +193,51 @@ export default class TaskAggregatorPlugin extends Plugin {
 		await this.app.vault.modify(tasksFile, nextContent);
 	}
 
+	async updateTask(task: TaskItem, input: NewTaskInput): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(task.filePath);
+		const title = input.title.trim();
+
+		if (!(file instanceof TFile)) {
+			new Notice("Could not find task file");
+			return;
+		}
+
+		if (title.length === 0) {
+			new Notice("Task title is required");
+			return;
+		}
+
+		const content = await this.app.vault.read(file);
+		const lines = content.split(/\r?\n/);
+		const lineIndex = task.line - 1;
+
+		if (lines[lineIndex] === undefined) {
+			new Notice("Could not find task line");
+			return;
+		}
+
+		const metadata = [
+			!task.completed && input.status ? `@s:${input.status}` : null,
+			`@c:${task.createdDate}`,
+			input.dueDate ? `@d:${input.dueDate}` : null,
+			`@p:${input.priority}`,
+			...input.tags.map((tag) => `#${normalizeTag(tag)}`)
+		].filter((value): value is string => value !== null);
+		const description = input.description.trim();
+		const nextTaskLines = [
+			`- [${task.completed ? "x" : " "}] ${title} ${metadata.join(" ")}`,
+			...(description.length > 0 ? [`    ${description.replace(/\n/g, "\n    ")}`] : [])
+		];
+		let deleteCount = 1;
+
+		while (lines[lineIndex + deleteCount] !== undefined && /^\s{2,}\S/.test(lines[lineIndex + deleteCount] ?? "")) {
+			deleteCount++;
+		}
+
+		lines.splice(lineIndex, deleteCount, ...nextTaskLines);
+		await this.app.vault.modify(file, lines.join("\n"));
+	}
+
 	async updateTaskCompleted(task: TaskItem, completed: boolean): Promise<void> {
 		const file = this.app.vault.getAbstractFileByPath(task.filePath);
 

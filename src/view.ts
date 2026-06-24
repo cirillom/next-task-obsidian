@@ -271,6 +271,23 @@ export class TaskAggregatorView extends ItemView {
 			cls: "task-aggregator-score"
 		});
 
+		const editTaskButton = header.createEl("button", {
+			cls: "task-aggregator-edit-task"
+		});
+		editTaskButton.ariaLabel = "Edit task";
+		setIcon(editTaskButton, "pencil");
+		editTaskButton.addEventListener("click", () => {
+			new NewTaskModal(
+				this.plugin,
+				this.getEditableTags(),
+				async (input) => {
+					await this.plugin.updateTask(task, input);
+					await this.refresh();
+				},
+				task
+			).open();
+		});
+
 		const meta = card.createDiv({ cls: "task-aggregator-meta" });
 
 		const dueDateField = meta.createDiv({ cls: "task-aggregator-field" });
@@ -338,23 +355,6 @@ export class TaskAggregatorView extends ItemView {
 				cls: "task-aggregator-tag"
 			});
 		}
-
-		const editTagsButton = tags.createEl("button", {
-			cls: "task-aggregator-tag task-aggregator-edit-tags"
-		});
-		editTagsButton.ariaLabel = "Edit tags";
-		setIcon(editTagsButton, "pencil");
-		editTagsButton.addEventListener("click", () => {
-			new TaskTagsModal(
-				this.plugin,
-				task,
-				this.getEditableTags(),
-				async (tags) => {
-					await this.plugin.updateTaskTags(task, tags);
-					await this.refresh();
-				}
-			).open();
-		});
 
 		if (task.description.trim().length > 0) {
 			card.createEl("p", {
@@ -484,104 +484,6 @@ export class TaskAggregatorView extends ItemView {
 	}
 }
 
-class TaskTagsModal extends Modal {
-	private readonly selectedTags: Set<string>;
-	private availableTags: string[];
-	private searchText = "";
-	private newTagText = "";
-
-	constructor(
-		private readonly plugin: TaskAggregatorPlugin,
-		private readonly task: TaskItem,
-		availableTags: string[],
-		private readonly onSave: (tags: string[]) => Promise<void>
-	) {
-		super(plugin.app);
-		this.availableTags = availableTags;
-		this.selectedTags = new Set(task.tags.map((tag) => normalizeTag(tag)));
-	}
-
-	onOpen(): void {
-		this.render();
-	}
-
-	private render(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.createEl("h2", { text: "Edit tags" });
-
-		const createTag = contentEl.createDiv({ cls: "task-aggregator-new-tag" });
-		const newTagInput = createTag.createEl("input");
-		newTagInput.type = "text";
-		newTagInput.placeholder = "New tag";
-		newTagInput.value = this.newTagText;
-		newTagInput.addEventListener("input", () => {
-			this.newTagText = newTagInput.value;
-		});
-
-		const addTagButton = createTag.createEl("button", { text: "Add tag" });
-		addTagButton.addEventListener("click", () => {
-			void this.addNewTag();
-		});
-
-		const visibleTags = this.availableTags.filter((tag) => tag.includes(normalizeTag(this.searchText)));
-		const tagList = contentEl.createDiv({
-			cls: "task-aggregator-tag-hint-list task-aggregator-modal-tag-list"
-		});
-
-		const searchInput = tagList.createEl("input", { cls: "task-aggregator-tag-search" });
-		searchInput.type = "search";
-		searchInput.placeholder = "Search tags";
-		searchInput.value = this.searchText;
-		searchInput.addEventListener("input", () => {
-			this.searchText = searchInput.value;
-			this.render();
-		});
-
-		for (const tag of visibleTags) {
-			const isSelected = this.selectedTags.has(tag);
-			const button = tagList.createEl("button", {
-				text: `#${tag}`,
-				cls: isSelected
-					? "task-aggregator-tag-hint task-aggregator-tag-hint-selected"
-					: "task-aggregator-tag-hint"
-			});
-
-			button.addEventListener("click", () => {
-				if (isSelected) {
-					this.selectedTags.delete(tag);
-				} else {
-					this.selectedTags.add(tag);
-				}
-
-				this.render();
-			});
-		}
-
-		const actions = contentEl.createDiv({ cls: "task-aggregator-modal-actions" });
-		const saveButton = actions.createEl("button", { text: "Save" });
-		saveButton.addEventListener("click", () => {
-			void this.onSave([...this.selectedTags]).then(() => this.close());
-		});
-	}
-
-	private async addNewTag(): Promise<void> {
-		const tag = await this.plugin.addConfigTag(this.newTagText);
-
-		if (!tag) {
-			return;
-		}
-
-		if (!this.availableTags.includes(tag)) {
-			this.availableTags = [...this.availableTags, tag].sort((a, b) => a.localeCompare(b));
-		}
-
-		this.selectedTags.add(tag);
-		this.newTagText = "";
-		this.render();
-	}
-}
-
 class NewTaskModal extends Modal {
 	private selectedTags = new Set<string>();
 	private availableTags: string[];
@@ -595,10 +497,20 @@ class NewTaskModal extends Modal {
 	constructor(
 		private readonly plugin: TaskAggregatorPlugin,
 		availableTags: string[],
-		private readonly onSave: (input: NewTaskInput) => Promise<void>
+		private readonly onSave: (input: NewTaskInput) => Promise<void>,
+		private readonly task?: TaskItem
 	) {
 		super(plugin.app);
 		this.availableTags = availableTags;
+
+		if (task) {
+			this.selectedTags = new Set(task.tags.map((tag) => normalizeTag(tag)));
+			this.titleText = task.title;
+			this.dueDate = task.dueDate ?? "";
+			this.priority = task.priority ?? 1;
+			this.status = task.status ?? "";
+			this.description = task.description;
+		}
 	}
 
 	onOpen(): void {
@@ -608,7 +520,7 @@ class NewTaskModal extends Modal {
 	private render(): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.createEl("h2", { text: "New task" });
+		contentEl.createEl("h2", { text: this.task ? "Edit task" : "New task" });
 
 		const titleField = contentEl.createDiv({ cls: "task-aggregator-field" });
 		titleField.createSpan({ text: "Title", cls: "task-aggregator-field-label" });
@@ -706,7 +618,7 @@ class NewTaskModal extends Modal {
 		});
 
 		const actions = contentEl.createDiv({ cls: "task-aggregator-modal-actions" });
-		const saveButton = actions.createEl("button", { text: "Create task" });
+		const saveButton = actions.createEl("button", { text: this.task ? "Save" : "Create task" });
 		saveButton.addEventListener("click", () => {
 			void this.onSave({
 				title: this.titleText,

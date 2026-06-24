@@ -65,6 +65,11 @@
 	padding-inline: 0;
 }
 
+.task-aggregator-edit-task {
+	width: 28px;
+	padding-inline: 0;
+}
+
 .task-aggregator-tags {
 	display: flex;
 	flex-wrap: wrap;
@@ -169,12 +174,6 @@
 
 .task-aggregator-tag-search {
 	min-width: 140px;
-}
-
-.task-aggregator-edit-tags {
-	width: 28px;
-	padding-inline: 0;
-	cursor: pointer;
 }
 
 .task-aggregator-new-tag,
