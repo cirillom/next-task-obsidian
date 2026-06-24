@@ -4,7 +4,7 @@ import type { TaskItem } from "./model/task";
 import { DEFAULT_SCORE_FORMULA, scoreTask } from "./scoring/score";
 import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
 import { parseTaskConfig } from "./parser/config-parser";
-import { TagGraph } from "./model/tag-graph";
+import { TagGraph, normalizeTag } from "./model/tag-graph";
 import { registerCommands } from "./commands";
 
 const CONFIG_FILE_PATH = "Tasks-Config.md";
@@ -205,6 +205,66 @@ export default class TaskAggregatorPlugin extends Plugin {
 		lines[lineIndex] = `${lineWithoutPriority.trimEnd()} @p:${priority}`;
 
 		await this.app.vault.modify(file, lines.join("\n"));
+	}
+
+	async updateTaskTags(task: TaskItem, tags: string[]): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(task.filePath);
+
+		if (!(file instanceof TFile)) {
+			new Notice("Could not find task file");
+			return;
+		}
+
+		const content = await this.app.vault.read(file);
+		const lines = content.split(/\r?\n/);
+		const lineIndex = task.line - 1;
+		const line = lines[lineIndex];
+
+		if (line === undefined) {
+			new Notice("Could not find task line");
+			return;
+		}
+
+		const normalizedTags = tags
+			.map((tag) => normalizeTag(tag))
+			.filter((tag) => tag.length > 0);
+		const lineWithoutTags = line.replace(/\s+#[\p{L}\p{N}_/-]+/gu, "");
+		const tagText = normalizedTags.map((tag) => `#${tag}`).join(" ");
+		lines[lineIndex] = tagText.length === 0
+			? lineWithoutTags
+			: `${lineWithoutTags.trimEnd()} ${tagText}`;
+
+		await this.app.vault.modify(file, lines.join("\n"));
+	}
+
+	async addConfigTag(tag: string): Promise<string | null> {
+		const normalizedTag = normalizeTag(tag);
+
+		if (normalizedTag.length === 0) {
+			return null;
+		}
+
+		const configFile = this.app.vault.getAbstractFileByPath(CONFIG_FILE_PATH);
+		const tagLine = `#${normalizedTag} |`;
+
+		if (!(configFile instanceof TFile)) {
+			await this.app.vault.create(CONFIG_FILE_PATH, `${tagLine}\n`);
+			return normalizedTag;
+		}
+
+		const content = await this.app.vault.read(configFile);
+
+		if (parseTaskConfig(content).tagGraph.getAllTags().includes(normalizedTag)) {
+			return normalizedTag;
+		}
+
+		const nextContent = content.endsWith("\n")
+			? `${content}${tagLine}\n`
+			: `${content}\n${tagLine}\n`;
+
+		await this.app.vault.modify(configFile, nextContent);
+
+		return normalizedTag;
 	}
 
 	private expandTaskTags(tags: string[], tagGraph: TagGraph): string[] {

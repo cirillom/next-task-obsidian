@@ -4,6 +4,22 @@ export class TagGraph {
 	private readonly parentsByChild: TagRelationships = new Map();
 	private readonly childrenByParent: TagRelationships = new Map();
 
+	addTag(tag: string): void {
+		const normalizedTag = normalizeTag(tag);
+
+		if (normalizedTag.length === 0) {
+			return;
+		}
+
+		if (!this.parentsByChild.has(normalizedTag)) {
+			this.parentsByChild.set(normalizedTag, new Set());
+		}
+
+		if (!this.childrenByParent.has(normalizedTag)) {
+			this.childrenByParent.set(normalizedTag, new Set());
+		}
+	}
+
 	addRelationship(childTag: string, parentTag: string): void {
 		const child = normalizeTag(childTag);
 		const parent = normalizeTag(parentTag);
@@ -133,7 +149,7 @@ export class TagGraph {
 		return this.parentsByChild.size > 0 || this.childrenByParent.size > 0;
 	}
 
-	private getAllTags(): string[] {
+	getAllTags(): string[] {
 		const tags = new Set<string>();
 
 		for (const [child, parents] of this.parentsByChild) {

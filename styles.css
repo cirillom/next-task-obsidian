@@ -170,6 +170,27 @@
 	min-width: 140px;
 }
 
+.task-aggregator-edit-tags {
+	width: 28px;
+	padding-inline: 0;
+	cursor: pointer;
+}
+
+.task-aggregator-new-tag,
+.task-aggregator-modal-actions {
+	display: flex;
+	gap: 6px;
+	margin-top: 12px;
+}
+
+.task-aggregator-new-tag input {
+	flex: 1;
+}
+
+.task-aggregator-modal-tag-list {
+	margin-top: 18px;
+}
+
 .task-aggregator-config-status {
 	margin: 8px 0 12px;
 	color: var(--text-muted);

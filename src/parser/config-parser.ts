@@ -43,6 +43,8 @@ export function parseTaskConfig(source: string): TaskConfig {
 			continue;
 		}
 
+		graph.addTag(child);
+
 		for (const match of rawParents.matchAll(PARENT_TAG)) {
 			const parent = match[1];
 
