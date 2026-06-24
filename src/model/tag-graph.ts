@@ -53,6 +53,35 @@ export class TagGraph {
 		return expanded;
 	}
 
+	expandAncestors(tag: string): Set<string> {
+		const normalizedTag = normalizeTag(tag);
+		const expanded = new Set<string>();
+
+		if (normalizedTag.length === 0) {
+			return expanded;
+		}
+
+		const pending = [normalizedTag];
+
+		while (pending.length > 0) {
+			const current = pending.pop();
+
+			if (!current || expanded.has(current)) {
+				continue;
+			}
+
+			expanded.add(current);
+
+			for (const parent of this.parentsByChild.get(current) ?? []) {
+				if (!expanded.has(parent)) {
+					pending.push(parent);
+				}
+			}
+		}
+
+		return expanded;
+	}
+
 	detectCycles(): string[][] {
 		const cycles: string[][] = [];
 		const seenCycleKeys = new Set<string>();

@@ -65,7 +65,10 @@ export default class TaskAggregatorPlugin extends Plugin {
 		}
 	}
 
-	async loadTasks(scoreFormula = DEFAULT_SCORE_FORMULA): Promise<TaskItem[]> {
+	async loadTasks(
+		scoreFormula = DEFAULT_SCORE_FORMULA,
+		tagGraph = new TagGraph()
+	): Promise<TaskItem[]> {
 		const files = this.app.vault
 			.getMarkdownFiles()
 			.filter((file) => file.path !== CONFIG_FILE_PATH);
@@ -77,6 +80,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 			const tasks = parseTasksFromMarkdown(content, file.path);
 
 			for (const task of tasks) {
+				task.tags = this.expandTaskTags(task.tags, tagGraph);
 				task.score = scoreTask(task, new Date(), scoreFormula);
 				allTasks.push(task);
 			}
@@ -87,7 +91,10 @@ export default class TaskAggregatorPlugin extends Plugin {
 
 	async loadTaskAggregatorData(): Promise<TaskAggregatorData> {
 		const configResult = await this.loadConfig();
-		const tasks = await this.loadTasks(configResult.scoreFormula ?? DEFAULT_SCORE_FORMULA);
+		const tasks = await this.loadTasks(
+			configResult.scoreFormula ?? DEFAULT_SCORE_FORMULA,
+			configResult.tagGraph
+		);
 
 		return {
 			tasks,
@@ -96,6 +103,18 @@ export default class TaskAggregatorPlugin extends Plugin {
 			configError: configResult.error,
 			cycles: configResult.tagGraph.detectCycles()
 		};
+	}
+
+	private expandTaskTags(tags: string[], tagGraph: TagGraph): string[] {
+		const expandedTags = new Set<string>();
+
+		for (const tag of tags) {
+			for (const expandedTag of tagGraph.expandAncestors(tag)) {
+				expandedTags.add(expandedTag);
+			}
+		}
+
+		return [...expandedTags];
 	}
 
 	private async loadConfig(): Promise<{
