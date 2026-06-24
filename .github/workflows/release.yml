@@ -88,7 +88,7 @@ jobs:
         run: |
           VERSION="${{ steps.bump.outputs.version }}"
 
-          git add package.json manifest.json versions.json main.js
+          git add package.json manifest.json versions.json
 
           if [ -f package-lock.json ]; then
             git add package-lock.json
