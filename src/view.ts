@@ -1,8 +1,9 @@
-import { ItemView, MarkdownRenderer, Modal, setIcon, WorkspaceLeaf } from "obsidian";
+import { ItemView, Modal, setIcon, WorkspaceLeaf } from "obsidian";
 import type TaskAggregatorPlugin from "./main";
 import type { NewTaskInput } from "./main";
 import type { TaskItem } from "./model/task";
 import { TagGraph, normalizeTag } from "./model/tag-graph";
+import { renderTaskCard } from "./ui/task-card";
 
 export const TASK_AGGREGATOR_VIEW = "task-aggregator-view";
 
@@ -270,150 +271,47 @@ export class TaskAggregatorView extends ItemView {
 	}
 
 	private renderTask(parent: HTMLElement, task: TaskItem): void {
-		const card = parent.createDiv({ cls: "task-aggregator-task" });
-
-		const header = card.createDiv({ cls: "task-aggregator-task-header" });
-
-		const checkbox = header.createEl("input", {
-			cls: "task-aggregator-checkbox"
-		});
-		checkbox.type = "checkbox";
-		checkbox.checked = task.completed;
-		checkbox.addEventListener("change", () => {
-			void this.plugin.updateTaskCompleted(task, checkbox.checked)
-				.then(() => this.refresh());
-		});
-
-		header.createEl("strong", {
-			text: task.title,
-			cls: "task-aggregator-title"
-		});
-
-		header.createEl("span", {
-			text: `score: ${task.score.toFixed(1)}`,
-			cls: "task-aggregator-score"
-		});
-
-		const editTaskButton = header.createEl("button", {
-			cls: "task-aggregator-edit-task"
-		});
-		editTaskButton.ariaLabel = "Edit task";
-		setIcon(editTaskButton, "pencil");
-		editTaskButton.addEventListener("click", () => {
-			new NewTaskModal(
-				this.plugin,
-				this.getEditableTags(),
-				async (input) => {
-					await this.plugin.updateTask(task, input);
+		renderTaskCard(parent, task, {
+			app: this.plugin.app,
+			component: this,
+			callbacks: {
+				updateCompleted: async (selectedTask, completed) => {
+					await this.plugin.updateTaskCompleted(selectedTask, completed);
 					await this.refresh();
 				},
-				task
-			).open();
-		});
-
-		const meta = card.createDiv({ cls: "task-aggregator-meta" });
-
-		const dueDateField = meta.createDiv({ cls: "task-aggregator-field" });
-		dueDateField.createSpan({ text: "Due date", cls: "task-aggregator-field-label" });
-
-		const dueDateInput = dueDateField.createEl("input");
-		dueDateInput.type = "date";
-		dueDateInput.value = task.dueDate ?? "";
-		const saveDueDate = (): void => {
-			if ((task.dueDate ?? "") === dueDateInput.value) {
-				return;
+				updateDueDate: async (selectedTask, dueDate) => {
+					await this.plugin.updateTaskDueDate(selectedTask, dueDate);
+					await this.refresh();
+				},
+				updatePriority: async (selectedTask, priority) => {
+					await this.plugin.updateTaskPriority(selectedTask, priority);
+					await this.refresh();
+				},
+				updateStatus: async (selectedTask, status) => {
+					await this.plugin.updateTaskStatus(selectedTask, status);
+					await this.refresh();
+				},
+				openSource: async (selectedTask) => {
+					await this.plugin.openTaskSource(selectedTask);
+				},
+				filterTag: (tag) => {
+					const selectedTags = new Set(this.parseTagFilter(this.tagFilterText));
+					selectedTags.add(this.normalizeTag(tag));
+					this.tagFilterText = [...selectedTags].join(" ");
+					this.render();
+				},
+				editTask: (selectedTask) => {
+					new NewTaskModal(
+						this.plugin,
+						this.getEditableTags(),
+						async (input) => {
+							await this.plugin.updateTask(selectedTask, input);
+							await this.refresh();
+						},
+						selectedTask
+					).open();
+				}
 			}
-
-			void this.plugin.updateTaskDueDate(task, dueDateInput.value || null)
-				.then(() => this.refresh());
-		};
-		dueDateInput.addEventListener("keydown", (event) => {
-			if (event.key === "Enter") {
-				saveDueDate();
-			}
-		});
-		dueDateInput.addEventListener("blur", () => {
-			saveDueDate();
-		});
-
-		const priorityField = meta.createDiv({ cls: "task-aggregator-field" });
-		priorityField.createSpan({ text: "Priority", cls: "task-aggregator-field-label" });
-
-		const priorityControls = priorityField.createDiv({ cls: "task-aggregator-priority-controls" });
-		const decreasePriorityButton = priorityControls.createEl("button", { text: "-" });
-		const priorityInput = priorityControls.createEl("input");
-		const increasePriorityButton = priorityControls.createEl("button", { text: "+" });
-
-		decreasePriorityButton.disabled = task.priority <= 1;
-		decreasePriorityButton.addEventListener("click", () => {
-			void this.plugin.updateTaskPriority(task, Math.max(1, task.priority - 1))
-				.then(() => this.refresh());
-		});
-
-		priorityInput.type = "number";
-		priorityInput.min = "1";
-		priorityInput.required = true;
-		priorityInput.value = task.priority.toString();
-		priorityInput.addEventListener("change", () => {
-			const priority = Math.max(1, Math.floor(Number(priorityInput.value) || 1));
-
-			void this.plugin.updateTaskPriority(task, priority)
-				.then(() => this.refresh());
-		});
-
-		increasePriorityButton.addEventListener("click", () => {
-			void this.plugin.updateTaskPriority(task, task.priority + 1)
-				.then(() => this.refresh());
-		});
-
-		const statusField = meta.createDiv({ cls: "task-aggregator-field" });
-		statusField.createSpan({ text: "Status", cls: "task-aggregator-field-label" });
-
-		const statusSelect = statusField.createEl("select");
-		this.addOption(statusSelect, "", "");
-
-		for (const status of EDITABLE_STATUSES) {
-			this.addOption(statusSelect, status, status);
-		}
-
-		statusSelect.value = task.status ?? "";
-		statusSelect.addEventListener("change", () => {
-			void this.plugin.updateTaskStatus(task, statusSelect.value || null)
-				.then(() => this.refresh());
-		});
-
-		const tags = card.createDiv({ cls: "task-aggregator-tags" });
-
-		for (const tag of task.tags) {
-			const tagButton = tags.createEl("button", {
-				text: `#${tag}`,
-				cls: "task-aggregator-tag"
-			});
-			tagButton.addEventListener("click", () => {
-				const selectedTags = new Set(this.parseTagFilter(this.tagFilterText));
-				selectedTags.add(this.normalizeTag(tag));
-				this.tagFilterText = [...selectedTags].join(" ");
-				this.render();
-			});
-		}
-
-		if (task.description.trim().length > 0) {
-			const description = card.createDiv({ cls: "task-aggregator-description" });
-			void MarkdownRenderer.render(
-				this.plugin.app,
-				task.description,
-				description,
-				task.filePath,
-				this
-			);
-		}
-
-		const source = card.createEl("small", {
-			text: `${task.filePath}:${task.line} · created: ${task.createdDate}`,
-			cls: "task-aggregator-source"
-		});
-		source.addEventListener("click", () => {
-			void this.plugin.openTaskSource(task);
 		});
 	}
 
