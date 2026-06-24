@@ -183,7 +183,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 		await this.app.vault.modify(file, lines.join("\n"));
 	}
 
-	async updateTaskPriority(task: TaskItem, priority: number | null): Promise<void> {
+	async updateTaskPriority(task: TaskItem, priority: number): Promise<void> {
 		const file = this.app.vault.getAbstractFileByPath(task.filePath);
 
 		if (!(file instanceof TFile)) {
@@ -202,9 +202,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 		}
 
 		const lineWithoutPriority = line.replace(/\s+@p:[^\s]+/, "");
-		lines[lineIndex] = priority === null
-			? lineWithoutPriority
-			: `${lineWithoutPriority.trimEnd()} @p:${priority}`;
+		lines[lineIndex] = `${lineWithoutPriority.trimEnd()} @p:${priority}`;
 
 		await this.app.vault.modify(file, lines.join("\n"));
 	}

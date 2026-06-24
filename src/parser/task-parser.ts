@@ -23,6 +23,10 @@ export function parseTasksFromMarkdown(source: string, filePath: string): TaskIt
 		const dueDate = extractField(rawBody, "d");
 		const priorityRaw = extractField(rawBody, "p");
 
+		if (!createdDate || !priorityRaw) {
+			continue;
+		}
+
 		const title = rawBody
 			.replace(/@\w+:[^\s]+/g, "")
 			.replace(/#[\p{L}\p{N}_/-]+/gu, "")
@@ -41,7 +45,7 @@ export function parseTasksFromMarkdown(source: string, filePath: string): TaskIt
 			status,
 			createdDate,
 			dueDate,
-			priority: priorityRaw ? Number(priorityRaw) : null,
+			priority: Number(priorityRaw),
 			tags,
 			description: descriptionLines.join("\n"),
 			filePath,

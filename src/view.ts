@@ -254,13 +254,47 @@ export class TaskAggregatorView extends ItemView {
 		});
 
 		header.createEl("span", {
+			text: `created: ${task.createdDate}`,
+			cls: "task-aggregator-created-date"
+		});
+
+		header.createEl("span", {
 			text: `score: ${task.score.toFixed(1)}`,
 			cls: "task-aggregator-score"
 		});
 
 		const meta = card.createDiv({ cls: "task-aggregator-meta" });
 
-		const statusSelect = meta.createEl("select");
+		const dueDateField = meta.createDiv({ cls: "task-aggregator-field" });
+		dueDateField.createSpan({ text: "Due date", cls: "task-aggregator-field-label" });
+
+		const dueDateInput = dueDateField.createEl("input");
+		dueDateInput.type = "date";
+		dueDateInput.value = task.dueDate ?? "";
+		dueDateInput.addEventListener("change", () => {
+			void this.plugin.updateTaskDueDate(task, dueDateInput.value || null)
+				.then(() => this.refresh());
+		});
+
+		const priorityField = meta.createDiv({ cls: "task-aggregator-field" });
+		priorityField.createSpan({ text: "Priority", cls: "task-aggregator-field-label" });
+
+		const priorityInput = priorityField.createEl("input");
+		priorityInput.type = "number";
+		priorityInput.min = "1";
+		priorityInput.required = true;
+		priorityInput.value = task.priority?.toString() ?? "1";
+		priorityInput.addEventListener("change", () => {
+			const priority = Math.max(1, Math.floor(Number(priorityInput.value) || 1));
+
+			void this.plugin.updateTaskPriority(task, priority)
+				.then(() => this.refresh());
+		});
+
+		const statusField = meta.createDiv({ cls: "task-aggregator-field" });
+		statusField.createSpan({ text: "Status", cls: "task-aggregator-field-label" });
+
+		const statusSelect = statusField.createEl("select");
 		this.addOption(statusSelect, "", "");
 
 		for (const status of EDITABLE_STATUSES) {
@@ -270,29 +304,6 @@ export class TaskAggregatorView extends ItemView {
 		statusSelect.value = task.status ?? "";
 		statusSelect.addEventListener("change", () => {
 			void this.plugin.updateTaskStatus(task, statusSelect.value || null)
-				.then(() => this.refresh());
-		});
-
-		meta.createSpan({ text: `created: ${task.createdDate ?? "none"}` });
-
-		const dueDateInput = meta.createEl("input");
-		dueDateInput.type = "date";
-		dueDateInput.value = task.dueDate ?? "";
-		dueDateInput.addEventListener("change", () => {
-			void this.plugin.updateTaskDueDate(task, dueDateInput.value || null)
-				.then(() => this.refresh());
-		});
-
-		const priorityInput = meta.createEl("input");
-		priorityInput.type = "number";
-		priorityInput.min = "1";
-		priorityInput.value = task.priority?.toString() ?? "";
-		priorityInput.addEventListener("change", () => {
-			const priority = priorityInput.value === ""
-				? null
-				: Math.max(1, Math.floor(Number(priorityInput.value)));
-
-			void this.plugin.updateTaskPriority(task, priority)
 				.then(() => this.refresh());
 		});
 
