@@ -80,7 +80,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 			const tasks = parseTasksFromMarkdown(content, file.path);
 
 			for (const task of tasks) {
-				task.tags = this.expandTaskTags(task.tags, tagGraph);
+				task.resolvedTags = this.expandTaskTags(task.tags, tagGraph);
 				task.score = scoreTask(task, new Date(), scoreFormula);
 				allTasks.push(task);
 			}

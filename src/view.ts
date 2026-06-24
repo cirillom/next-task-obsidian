@@ -305,7 +305,7 @@ export class TaskAggregatorView extends ItemView {
 			return true;
 		}
 
-		const taskTags = task.tags.map((tag) => this.normalizeTag(tag));
+		const taskTags = this.getTaskFilterTags(task);
 		const expandedFilters = tagFilter.map((tag) => this.tagGraph.expandDescendants(tag));
 
 		return expandedFilters.some((expandedFilter) =>
@@ -327,7 +327,7 @@ export class TaskAggregatorView extends ItemView {
 		const tags = new Set<string>();
 
 		for (const task of this.allTasks) {
-			for (const tag of task.tags) {
+			for (const tag of this.getTaskFilterTags(task)) {
 				tags.add(this.normalizeTag(tag));
 			}
 		}
@@ -344,6 +344,10 @@ export class TaskAggregatorView extends ItemView {
 
 	private normalizeTag(tag: string): string {
 		return normalizeTag(tag);
+	}
+
+	private getTaskFilterTags(task: TaskItem): string[] {
+		return (task.resolvedTags ?? task.tags).map((tag) => this.normalizeTag(tag));
 	}
 
 	private addOption(select: HTMLSelectElement, value: string, text: string): void {

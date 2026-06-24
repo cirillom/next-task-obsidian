@@ -5,6 +5,7 @@ export type TaskItem = {
   dueDate: string | null;     // YYYY-MM-DD
   priority: number | null;
   tags: string[];
+  resolvedTags?: string[];
   description: string;
   filePath: string;
   line: number;
