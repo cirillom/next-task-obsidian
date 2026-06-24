@@ -13,11 +13,11 @@ export function renderStatusFilter(
 	}
 
 	const statusFilter = parent.createDiv({
-		cls: "task-aggregator-status-filter task-aggregator-status-hints"
+		cls: "task-aggregator-status-filter"
 	});
 	statusFilter.createSpan({
 		text: "Status",
-		cls: "task-aggregator-status-filter-label task-aggregator-status-hints-label"
+		cls: "task-aggregator-status-filter-label"
 	});
 
 	for (const status of options.statuses) {
@@ -25,8 +25,8 @@ export function renderStatusFilter(
 		const button = statusFilter.createEl("button", {
 			text: status,
 			cls: isSelected
-				? "task-aggregator-status-filter-option task-aggregator-status-filter-option-selected task-aggregator-status-hint task-aggregator-status-hint-selected"
-				: "task-aggregator-status-filter-option task-aggregator-status-hint"
+				? "task-aggregator-status-filter-option task-aggregator-status-filter-option-selected"
+				: "task-aggregator-status-filter-option"
 		});
 
 		button.addEventListener("click", () => {

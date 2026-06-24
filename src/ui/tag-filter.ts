@@ -16,9 +16,9 @@ export function renderTagFilter(
 		return;
 	}
 
-	const tagFilter = parent.createDiv({ cls: "task-aggregator-tag-filter task-aggregator-tag-hints" });
+	const tagFilter = parent.createDiv({ cls: "task-aggregator-tag-filter" });
 	const tagFilterControls = tagFilter.createDiv({
-		cls: "task-aggregator-tag-filter-controls task-aggregator-tag-hint-controls"
+		cls: "task-aggregator-tag-filter-controls"
 	});
 
 	const searchInput = tagFilterControls.createEl("input", {
@@ -38,7 +38,7 @@ export function renderTagFilter(
 	if (options.selectedTags.size > 0) {
 		const deselectAllButton = tagFilterControls.createEl("button", {
 			text: "Deselect all",
-			cls: "task-aggregator-tag-filter-option task-aggregator-tag-hint"
+			cls: "task-aggregator-tag-filter-option"
 		});
 
 		deselectAllButton.addEventListener("click", () => {
@@ -47,7 +47,7 @@ export function renderTagFilter(
 	}
 
 	const tagFilterList = tagFilter.createDiv({
-		cls: "task-aggregator-tag-filter-list task-aggregator-tag-hint-list"
+		cls: "task-aggregator-tag-filter-list"
 	});
 
 	for (const tag of visibleTags) {
@@ -55,8 +55,8 @@ export function renderTagFilter(
 		const button = tagFilterList.createEl("button", {
 			text: `#${tag}`,
 			cls: isSelected
-				? "task-aggregator-tag-filter-option task-aggregator-tag-filter-option-selected task-aggregator-tag-hint task-aggregator-tag-hint-selected"
-				: "task-aggregator-tag-filter-option task-aggregator-tag-hint"
+				? "task-aggregator-tag-filter-option task-aggregator-tag-filter-option-selected"
+				: "task-aggregator-tag-filter-option"
 		});
 
 		button.addEventListener("click", () => {

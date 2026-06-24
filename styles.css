@@ -1,3 +1,4 @@
+/* Header */
 .task-aggregator-summary {
 	color: var(--text-muted);
 }
@@ -24,6 +25,7 @@
 	gap: 12px;
 }
 
+/* Task cards */
 .task-aggregator-task {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 8px;
@@ -120,28 +122,13 @@
 	margin-bottom: 12px;
 }
 
-.task-aggregator-control-group {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-}
-
-.task-aggregator-control-group label {
-	font-size: 0.8em;
-	color: var(--text-muted);
-}
-
-.task-aggregator-control-group input,
-.task-aggregator-control-group select {
-	min-width: 140px;
-}
-
 .task-aggregator-buttons {
 	display: flex;
 	gap: 8px;
 }
 
-.task-aggregator-tag-hints {
+/* Filters */
+.task-aggregator-tag-filter {
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
@@ -149,7 +136,8 @@
 	margin: 8px 0 12px;
 }
 
-.task-aggregator-tag-hint-controls,
+.task-aggregator-tag-filter-controls,
+.task-aggregator-tag-filter-list,
 .task-aggregator-tag-hint-list {
 	display: flex;
 	flex-wrap: wrap;
@@ -157,7 +145,7 @@
 	gap: 6px;
 }
 
-.task-aggregator-status-hints {
+.task-aggregator-status-filter {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -165,13 +153,13 @@
 	margin: 8px 0 12px;
 }
 
-.task-aggregator-status-hints-label,
-.task-aggregator-tag-hints-label {
+.task-aggregator-status-filter-label {
 	color: var(--text-muted);
 	font-size: 0.85em;
 }
 
-.task-aggregator-status-hint,
+.task-aggregator-status-filter-option,
+.task-aggregator-tag-filter-option,
 .task-aggregator-tag-hint {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 999px;
@@ -181,7 +169,8 @@
 	cursor: pointer;
 }
 
-.task-aggregator-status-hint-selected,
+.task-aggregator-status-filter-option-selected,
+.task-aggregator-tag-filter-option-selected,
 .task-aggregator-tag-hint-selected {
 	border-color: var(--interactive-accent);
 	background: var(--interactive-accent);
@@ -192,15 +181,11 @@
 	min-width: 140px;
 }
 
-.task-aggregator-new-tag,
+/* Modal */
 .task-aggregator-modal-actions {
 	display: flex;
 	gap: 6px;
 	margin-top: 12px;
-}
-
-.task-aggregator-new-tag input {
-	flex: 1;
 }
 
 .task-aggregator-new-task-description {
