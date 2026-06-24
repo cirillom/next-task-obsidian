@@ -1,8 +1,20 @@
-import { Notice, Plugin } from "obsidian";
+import { Notice, Plugin, TFile } from "obsidian";
 import { parseTasksFromMarkdown } from "./parser/task-parser";
 import type { TaskItem } from "./model/task";
 import { scoreTask } from "./scoring/score";
 import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
+import { parseTagGraphConfig } from "./parser/config-parser";
+import { TagGraph } from "./model/tag-graph";
+
+const CONFIG_FILE_PATH = "Tasks-Config.md";
+
+export type TaskAggregatorData = {
+	tasks: TaskItem[];
+	tagGraph: TagGraph;
+	configStatus: "loaded" | "missing" | "error";
+	configError: string | null;
+	cycles: string[][];
+};
 
 export default class TaskAggregatorPlugin extends Plugin {
 	async onload(): Promise<void> {
@@ -11,44 +23,41 @@ export default class TaskAggregatorPlugin extends Plugin {
 			(leaf) => new TaskAggregatorView(leaf, this)
 		);
 
-		this.addRibbonIcon("list-todo", "Open Task Aggregator", async () => {
+		this.addRibbonIcon("list-todo", "Open task aggregator", async () => {
 			await this.activateView();
 		});
 
 		this.addCommand({
-			id: "open-task-aggregator",
-			name: "Open Task Aggregator",
+			id: "open",
+			name: "Open",
 			callback: async () => {
 				await this.activateView();
 			}
 		});
 
 		this.addCommand({
-			id: "refresh-task-aggregator",
-			name: "Refresh Task Aggregator",
+			id: "refresh",
+			name: "Refresh",
 			callback: async () => {
 				await this.refreshOpenViews();
-				new Notice("Task Aggregator refreshed");
+				new Notice("Task aggregator refreshed");
 			}
 		});
 	}
 
-	onunload(): void {
-		this.app.workspace.detachLeavesOfType(TASK_AGGREGATOR_VIEW);
-	}
-
 	async activateView(): Promise<void> {
 		const existingLeaves = this.app.workspace.getLeavesOfType(TASK_AGGREGATOR_VIEW);
+		const existingLeaf = existingLeaves[0];
 
-		if (existingLeaves.length > 0) {
-			this.app.workspace.revealLeaf(existingLeaves[0]);
+		if (existingLeaf) {
+			this.app.workspace.setActiveLeaf(existingLeaf, { focus: true });
 			return;
 		}
 
 		const leaf = this.app.workspace.getRightLeaf(false);
 
 		if (!leaf) {
-			new Notice("Could not open Task Aggregator view");
+			new Notice("Could not open task aggregator view");
 			return;
 		}
 
@@ -57,7 +66,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 			active: true
 		});
 
-		this.app.workspace.revealLeaf(leaf);
+		this.app.workspace.setActiveLeaf(leaf, { focus: true });
 	}
 
 	async refreshOpenViews(): Promise<void> {
@@ -67,7 +76,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 			const view = leaf.view;
 
 			if (view instanceof TaskAggregatorView) {
-				await view.render();
+				await view.refresh();
 			}
 		}
 	}
@@ -75,7 +84,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	async loadTasks(): Promise<TaskItem[]> {
 		const files = this.app.vault
 			.getMarkdownFiles()
-			.filter((file) => file.path !== "Tasks-Config.md");
+			.filter((file) => file.path !== CONFIG_FILE_PATH);
 
 		const allTasks: TaskItem[] = [];
 
@@ -90,5 +99,54 @@ export default class TaskAggregatorPlugin extends Plugin {
 		}
 
 		return allTasks.sort((a, b) => b.score - a.score);
+	}
+
+	async loadTaskAggregatorData(): Promise<TaskAggregatorData> {
+		const [tasks, configResult] = await Promise.all([
+			this.loadTasks(),
+			this.loadTagGraph()
+		]);
+
+		return {
+			tasks,
+			tagGraph: configResult.tagGraph,
+			configStatus: configResult.status,
+			configError: configResult.error,
+			cycles: configResult.tagGraph.detectCycles()
+		};
+	}
+
+	private async loadTagGraph(): Promise<{
+		tagGraph: TagGraph;
+		status: TaskAggregatorData["configStatus"];
+		error: string | null;
+	}> {
+		const configFile = this.app.vault.getAbstractFileByPath(CONFIG_FILE_PATH);
+
+		if (!(configFile instanceof TFile)) {
+			return {
+				tagGraph: new TagGraph(),
+				status: "missing",
+				error: null
+			};
+		}
+
+		try {
+			const content = await this.app.vault.cachedRead(configFile);
+
+			return {
+				tagGraph: parseTagGraphConfig(content),
+				status: "loaded",
+				error: null
+			};
+		} catch (error) {
+			console.error("Task Aggregator failed to load Tasks-Config.md", error);
+
+			return {
+				tagGraph: new TagGraph(),
+				status: "error",
+				error: error instanceof Error ? error.message : "Unknown error"
+			};
+		}
 	}
 }

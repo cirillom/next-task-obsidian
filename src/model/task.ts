@@ -1,4 +1,4 @@
-type TaskItem = {
+export type TaskItem = {
   title: string;
   status: string | null;
   createdDate: string | null; // YYYY-MM-DD

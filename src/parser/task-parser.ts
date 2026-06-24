@@ -7,13 +7,16 @@ export function parseTasksFromMarkdown(source: string, filePath: string): TaskIt
 	const tasks: TaskItem[] = [];
 
 	for (let i = 0; i < lines.length; i++) {
-		const match = lines[i].match(TASK_LINE);
+		const line = lines[i] ?? "";
+		const match = line.match(TASK_LINE);
 		if (!match) continue;
 
-		const completed = match[1].toLowerCase() === "x";
-		const rawBody = match[2];
+		const completed = (match[1] ?? "").toLowerCase() === "x";
+		const rawBody = match[2] ?? "";
 
-		const tags = [...rawBody.matchAll(/#([\p{L}\p{N}_/-]+)/gu)].map(m => m[1]);
+		const tags = [...rawBody.matchAll(/#([\p{L}\p{N}_/-]+)/gu)]
+			.map((tagMatch) => tagMatch[1])
+			.filter((tag): tag is string => tag !== undefined);
 
 		const status = extractField(rawBody, "s");
 		const createdDate = extractField(rawBody, "c");
@@ -28,8 +31,8 @@ export function parseTasksFromMarkdown(source: string, filePath: string): TaskIt
 		const descriptionLines: string[] = [];
 		let j = i + 1;
 
-		while (j < lines.length && /^\s{2,}\S/.test(lines[j])) {
-			descriptionLines.push(lines[j].trim());
+		while (j < lines.length && /^\s{2,}\S/.test(lines[j] ?? "")) {
+			descriptionLines.push((lines[j] ?? "").trim());
 			j++;
 		}
 
