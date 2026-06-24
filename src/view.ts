@@ -1,4 +1,4 @@
-import { ItemView, Modal, setIcon, WorkspaceLeaf } from "obsidian";
+import { ItemView, MarkdownRenderer, Modal, setIcon, WorkspaceLeaf } from "obsidian";
 import type TaskAggregatorPlugin from "./main";
 import type { NewTaskInput } from "./main";
 import type { TaskItem } from "./model/task";
@@ -371,10 +371,14 @@ export class TaskAggregatorView extends ItemView {
 		}
 
 		if (task.description.trim().length > 0) {
-			card.createEl("p", {
-				text: task.description,
-				cls: "task-aggregator-description"
-			});
+			const description = card.createDiv({ cls: "task-aggregator-description" });
+			void MarkdownRenderer.render(
+				this.plugin.app,
+				task.description,
+				description,
+				task.filePath,
+				this
+			);
 		}
 
 		const source = card.createEl("small", {
