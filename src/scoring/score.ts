@@ -30,13 +30,13 @@ function getScoreVariables(task: TaskItem, now: Date): ScoreVariables {
 		? Math.max(0, (now.getTime() - new Date(task.createdDate).getTime()) / DAY_MS)
 		: 0;
 
-	const daysUntilDue = task.dueDate
-		? (new Date(task.dueDate).getTime() - now.getTime()) / DAY_MS
-		: 999;
+	const dueOffsetDays = task.dueDate
+		? (now.getTime() - new Date(task.dueDate).getTime()) / DAY_MS
+		: 0;
 
 	return {
 		ageDays,
-		daysUntilDue,
+		dueOffsetDays,
 		priority
 	};
 }
