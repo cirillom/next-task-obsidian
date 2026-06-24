@@ -23,6 +23,7 @@ export class TaskAggregatorView extends ItemView {
 
 	private statusFilter = ALL_STATUSES;
 	private tagFilterText = "";
+	private tagSearchText = "";
 	private tagMatchMode: TagMatchMode = TAG_MATCH_ALL;
 
 	constructor(leaf: WorkspaceLeaf, plugin: TaskAggregatorPlugin) {
@@ -113,23 +114,6 @@ export class TaskAggregatorView extends ItemView {
 			this.render();
 		});
 
-		const tagGroup = controls.createDiv({ cls: "task-aggregator-control-group" });
-		tagGroup.createEl("label", { text: "Tags" });
-
-		const tagSelect = tagGroup.createEl("select");
-		this.addOption(tagSelect, "", "All tags");
-
-		for (const tag of this.getAvailableTags()) {
-			this.addOption(tagSelect, tag, `#${tag}`);
-		}
-
-		tagSelect.value = this.parseTagFilter(this.tagFilterText)[0] ?? "";
-
-		tagSelect.addEventListener("change", () => {
-			this.tagFilterText = tagSelect.value;
-			this.render();
-		});
-
 		const modeGroup = controls.createDiv({ cls: "task-aggregator-control-group" });
 		modeGroup.createEl("label", { text: "Tag mode" });
 
@@ -154,6 +138,7 @@ export class TaskAggregatorView extends ItemView {
 		resetButton.addEventListener("click", () => {
 			this.statusFilter = ALL_STATUSES;
 			this.tagFilterText = "";
+			this.tagSearchText = "";
 			this.tagMatchMode = TAG_MATCH_ALL;
 			this.render();
 		});
@@ -201,25 +186,60 @@ export class TaskAggregatorView extends ItemView {
 		}
 
 		const tagHints = container.createDiv({ cls: "task-aggregator-tag-hints" });
-		tagHints.createSpan({
-			text: "Available tags: ",
-			cls: "task-aggregator-tag-hints-label"
+		const tagHintControls = tagHints.createDiv({ cls: "task-aggregator-tag-hint-controls" });
+
+		const searchInput = tagHintControls.createEl("input", {
+			cls: "task-aggregator-tag-search"
+		});
+		searchInput.type = "search";
+		searchInput.placeholder = "Search tags";
+		searchInput.value = this.tagSearchText;
+		searchInput.addEventListener("input", () => {
+			this.tagSearchText = searchInput.value;
+			this.render();
 		});
 
-		for (const tag of tags) {
-			const button = tagHints.createEl("button", {
+		const visibleTags = tags.filter((tag) => tag.includes(this.normalizeTag(this.tagSearchText)));
+		const selectedTags = new Set(this.parseTagFilter(this.tagFilterText));
+		const allVisibleSelected = visibleTags.every((tag) => selectedTags.has(tag));
+
+		const toggleAllButton = tagHintControls.createEl("button", {
+			text: allVisibleSelected ? "Deselect all" : "Select all",
+			cls: "task-aggregator-tag-hint"
+		});
+
+		toggleAllButton.addEventListener("click", () => {
+			if (allVisibleSelected) {
+				this.tagFilterText = [...selectedTags]
+					.filter((tag) => !visibleTags.includes(tag))
+					.join(" ");
+			} else {
+				this.tagFilterText = [...new Set([...selectedTags, ...visibleTags])].join(" ");
+			}
+
+			this.render();
+		});
+
+		const tagHintList = tagHints.createDiv({ cls: "task-aggregator-tag-hint-list" });
+
+		for (const tag of visibleTags) {
+			const isSelected = selectedTags.has(tag);
+			const button = tagHintList.createEl("button", {
 				text: `#${tag}`,
-				cls: "task-aggregator-tag-hint"
+				cls: isSelected
+					? "task-aggregator-tag-hint task-aggregator-tag-hint-selected"
+					: "task-aggregator-tag-hint"
 			});
 
 			button.addEventListener("click", () => {
-				const currentTags = this.parseTagFilter(this.tagFilterText);
-				const normalizedTag = this.normalizeTag(tag);
-
-				if (!currentTags.includes(normalizedTag)) {
-					this.tagFilterText = [...currentTags, normalizedTag].join(" ");
-					this.render();
+				if (selectedTags.has(tag)) {
+					selectedTags.delete(tag);
+				} else {
+					selectedTags.add(tag);
 				}
+
+				this.tagFilterText = [...selectedTags].join(" ");
+				this.render();
 			});
 		}
 	}

@@ -95,10 +95,18 @@
 
 .task-aggregator-tag-hints {
 	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 8px;
+	margin: 8px 0 12px;
+}
+
+.task-aggregator-tag-hint-controls,
+.task-aggregator-tag-hint-list {
+	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 6px;
-	margin: 8px 0 12px;
 }
 
 .task-aggregator-tag-hints-label {
@@ -113,6 +121,16 @@
 	font-size: 0.8em;
 	background: var(--background-secondary);
 	cursor: pointer;
+}
+
+.task-aggregator-tag-hint-selected {
+	border-color: var(--interactive-accent);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.task-aggregator-tag-search {
+	min-width: 140px;
 }
 
 .task-aggregator-config-status {
