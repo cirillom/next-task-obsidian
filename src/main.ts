@@ -4,7 +4,8 @@ import { DEFAULT_SCORE_SCRIPT } from "./scoring/score";
 import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
 import { TagGraph } from "./model/tag-graph";
 import { registerCommands } from "./commands";
-import { ConfigService, CONFIG_FILE_PATH } from "./config/config-service";
+import { ConfigService } from "./config/config-service";
+import { CONFIG_FILE_PATH } from "./constants";
 import { TaskRepository } from "./tasks/task-repository";
 import type { NewTaskInput } from "./tasks/task-repository";
 
@@ -139,7 +140,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	async createConfigTemplate(): Promise<void> {
 		const result = await this.configService.createConfigTemplate();
 
-		new Notice(result === "created" ? "Tasks-Config.md created" : "Tasks-Config.md already exists");
+		new Notice(result === "created" ? `${CONFIG_FILE_PATH} created` : `${CONFIG_FILE_PATH} already exists`);
 
 		if (result === "created") {
 			await this.refreshOpenViews();

@@ -121,7 +121,7 @@ function renderSource(
 	openSource: (task: TaskItem) => Promise<void>
 ): void {
 	const source = parent.createEl("small", {
-		text: `${task.filePath}:${task.line} · created: ${task.createdDate}`,
+		text: `${task.filePath}:${task.line} - created: ${task.createdDate}`,
 		cls: "task-aggregator-source"
 	});
 	source.addEventListener("click", () => {

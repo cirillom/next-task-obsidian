@@ -1,4 +1,5 @@
 import { ItemView, setIcon, WorkspaceLeaf } from "obsidian";
+import { CONFIG_FILE_PATH, STATUS_ORDER } from "./constants";
 import type TaskAggregatorPlugin from "./main";
 import type { TaskItem } from "./model/task";
 import { TagGraph, normalizeTag } from "./model/tag-graph";
@@ -8,8 +9,6 @@ import { TaskFormModal } from "./ui/task-form-modal";
 import { renderTagFilter } from "./ui/tag-filter";
 
 export const TASK_AGGREGATOR_VIEW = "task-aggregator-view";
-
-const STATUS_ORDER = ["todo", "doing", "blocked", "done"];
 
 export class TaskAggregatorView extends ItemView {
 	private plugin: TaskAggregatorPlugin;
@@ -70,7 +69,7 @@ export class TaskAggregatorView extends ItemView {
 			void this.refresh();
 		});
 		const configButton = title.createEl("button", { cls: "task-aggregator-icon-button" });
-		configButton.ariaLabel = "Open Tasks-Config.md";
+		configButton.ariaLabel = `Open ${CONFIG_FILE_PATH}`;
 		setIcon(configButton, "settings");
 		configButton.addEventListener("click", () => {
 			void this.plugin.openTaskConfig();
@@ -128,16 +127,16 @@ export class TaskAggregatorView extends ItemView {
 		const status = container.createDiv({ cls: "task-aggregator-config-status" });
 
 		if (this.configStatus === "loaded") {
-			status.setText("Tasks-Config.md loaded");
+			status.setText(`${CONFIG_FILE_PATH} loaded`);
 			return;
 		}
 
 		if (this.configStatus === "error") {
-			status.setText(`Tasks-Config.md could not be loaded: ${this.configError ?? "Unknown error"}`);
+			status.setText(`${CONFIG_FILE_PATH} could not be loaded: ${this.configError ?? "Unknown error"}`);
 			return;
 		}
 
-		status.setText("No Tasks-Config.md found");
+		status.setText(`No ${CONFIG_FILE_PATH} found`);
 	}
 
 	private renderCycleWarnings(container: HTMLElement): void {
@@ -163,7 +162,7 @@ export class TaskAggregatorView extends ItemView {
 		const warning = container.createDiv({ cls: "task-aggregator-warning" });
 		warning.createEl("strong", { text: "Score calculation error" });
 		warning.createEl("p", {
-			text: `Scores are not being calculated from Tasks-Config.md. Using the default score instead. ${this.scoreError}`
+			text: `Scores are not being calculated from ${CONFIG_FILE_PATH}. Using the default score instead. ${this.scoreError}`
 		});
 	}
 

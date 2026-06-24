@@ -107,7 +107,7 @@ function buildScoreFunction(script: string): ScoreFunction {
 ${script}
 `;
 
-	// This is intentional: the score script is user-provided JavaScript from Tasks-Config.md.
+	// This is intentional: the score script is user-provided JavaScript from the config file.
 	// Keep the eval-like behavior isolated to this function.
 	// eslint-disable-next-line @typescript-eslint/no-implied-eval
 	return new Function("priority", "ageDays", "dueOffsetDays", source) as ScoreFunction;

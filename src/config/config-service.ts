@@ -1,10 +1,9 @@
 import { App, MarkdownView, TFile } from "obsidian";
+import { CONFIG_FILE_PATH } from "../constants";
 import { normalizeTag, TagGraph } from "../model/tag-graph";
 import { parseTaskConfig } from "../parser/config-parser";
 import { validateScoreScript } from "../scoring/score";
 import taskConfigTemplate from "../templates/Tasks-Config.md";
-
-export const CONFIG_FILE_PATH = "Tasks-Config.md";
 
 export type ConfigLoadResult = {
 	tagGraph: TagGraph;
@@ -42,7 +41,7 @@ export class ConfigService {
 				error: null
 			};
 		} catch (error) {
-			console.error("Task Aggregator failed to load Tasks-Config.md", error);
+			console.error(`Task Aggregator failed to load ${CONFIG_FILE_PATH}`, error);
 
 			return {
 				tagGraph: new TagGraph(),

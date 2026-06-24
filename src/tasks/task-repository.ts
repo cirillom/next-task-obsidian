@@ -1,12 +1,10 @@
 import { App, MarkdownView, Notice, TFile } from "obsidian";
+import { CONFIG_FILE_PATH, TASKS_FILE_PATH } from "../constants";
 import type { TaskItem } from "../model/task";
 import { normalizeTag, TagGraph } from "../model/tag-graph";
 import { parseTasksFromMarkdown } from "../parser/task-parser";
 import { DEFAULT_SCORE_SCRIPT, scoreTask } from "../scoring/score";
 import { modifyTaskLine, replaceTaskBlock } from "./task-source";
-
-const CONFIG_FILE_PATH = "Tasks-Config.md";
-const TASKS_FILE_PATH = "Tasks.md";
 
 export type NewTaskInput = {
 	title: string;

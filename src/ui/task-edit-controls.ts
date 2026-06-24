@@ -1,6 +1,5 @@
+import { EDITABLE_STATUSES } from "../constants";
 import { normalizeTag } from "../model/tag-graph";
-
-export const EDITABLE_STATUSES = ["doing", "blocked"] as const;
 
 export function normalizePriority(value: string | number): number {
 	return Math.max(1, Math.floor(Number(value) || 1));
