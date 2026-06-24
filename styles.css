@@ -13,6 +13,7 @@
 	border-radius: 8px;
 	padding: 12px;
 	background: var(--background-secondary);
+	cursor: pointer;
 }
 
 .task-aggregator-task-header {

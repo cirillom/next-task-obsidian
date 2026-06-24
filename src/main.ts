@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFile } from "obsidian";
+import { MarkdownView, Notice, Plugin, TFile } from "obsidian";
 import { parseTasksFromMarkdown } from "./parser/task-parser";
 import type { TaskItem } from "./model/task";
 import { DEFAULT_SCORE_FORMULA, scoreTask } from "./scoring/score";
@@ -131,6 +131,21 @@ export default class TaskAggregatorPlugin extends Plugin {
 			: `${lineWithoutStatus.trimEnd()} @s:${nextStatus}`;
 
 		await this.app.vault.modify(file, lines.join("\n"));
+	}
+
+	async openTaskSource(task: TaskItem): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(task.filePath);
+
+		if (!(file instanceof TFile)) {
+			new Notice("Could not find task file");
+			return;
+		}
+
+		const leaf = this.app.workspace.getLeaf(false);
+		await leaf.openFile(file, { active: true });
+
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		view?.editor.setCursor({ line: Math.max(0, task.line - 1), ch: 0 });
 	}
 
 	async updateTaskCompleted(task: TaskItem, completed: boolean): Promise<void> {

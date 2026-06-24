@@ -235,6 +235,13 @@ export class TaskAggregatorView extends ItemView {
 
 	private renderTask(parent: HTMLElement, task: TaskItem): void {
 		const card = parent.createDiv({ cls: "task-aggregator-task" });
+		card.addEventListener("click", (event) => {
+			if (this.isInteractiveClick(event)) {
+				return;
+			}
+
+			void this.plugin.openTaskSource(task);
+		});
 
 		const header = card.createDiv({ cls: "task-aggregator-task-header" });
 
@@ -460,6 +467,14 @@ export class TaskAggregatorView extends ItemView {
 		}
 
 		return task.completed ? "done" : "todo";
+	}
+
+	private isInteractiveClick(event: MouseEvent): boolean {
+		const target = event.target;
+
+		return target instanceof HTMLElement && Boolean(
+			target.closest("button, input, select, textarea, a")
+		);
 	}
 
 	private addOption(select: HTMLSelectElement, value: string, text: string): void {
