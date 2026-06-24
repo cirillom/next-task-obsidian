@@ -194,6 +194,8 @@ export class TaskAggregatorView extends ItemView {
 		searchInput.type = "search";
 		searchInput.placeholder = "Search tags";
 		searchInput.value = this.tagSearchText;
+		searchInput.setSelectionRange(this.tagSearchText.length, this.tagSearchText.length);
+		searchInput.focus();
 		searchInput.addEventListener("input", () => {
 			this.tagSearchText = searchInput.value;
 			this.render();
