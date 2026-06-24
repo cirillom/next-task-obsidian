@@ -5,17 +5,9 @@ import { DEFAULT_SCORE_FORMULA, scoreTask } from "./scoring/score";
 import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
 import { parseTaskConfig } from "./parser/config-parser";
 import { TagGraph } from "./model/tag-graph";
+import { registerCommands } from "./commands";
 
 const CONFIG_FILE_PATH = "Tasks-Config.md";
-const CONFIG_TEMPLATE = `# Task Aggregator config
-# Formula variables: priority, ageDays, daysUntilDue, duePressure, statusPenalty
-score = ${DEFAULT_SCORE_FORMULA}
-
-# Tag relationships
-# child-tag #parent-tag #another-parent
-obsidian #plugin #notes
-plugin #programming #project
-`;
 
 export type TaskAggregatorData = {
 	tasks: TaskItem[];
@@ -26,40 +18,15 @@ export type TaskAggregatorData = {
 };
 
 export default class TaskAggregatorPlugin extends Plugin {
+	readonly configFilePath = CONFIG_FILE_PATH;
+
 	async onload(): Promise<void> {
 		this.registerView(
 			TASK_AGGREGATOR_VIEW,
 			(leaf) => new TaskAggregatorView(leaf, this)
 		);
 
-		this.addRibbonIcon("list-todo", "Open task aggregator", async () => {
-			await this.activateView();
-		});
-
-		this.addCommand({
-			id: "open",
-			name: "Open",
-			callback: async () => {
-				await this.activateView();
-			}
-		});
-
-		this.addCommand({
-			id: "refresh",
-			name: "Refresh",
-			callback: async () => {
-				await this.refreshOpenViews();
-				new Notice("Task aggregator refreshed");
-			}
-		});
-
-		this.addCommand({
-			id: "create-config-template",
-			name: "Create config template",
-			callback: async () => {
-				await this.createConfigTemplate();
-			}
-		});
+		registerCommands(this);
 	}
 
 	async activateView(): Promise<void> {
@@ -129,19 +96,6 @@ export default class TaskAggregatorPlugin extends Plugin {
 			configError: configResult.error,
 			cycles: configResult.tagGraph.detectCycles()
 		};
-	}
-
-	private async createConfigTemplate(): Promise<void> {
-		const existingConfig = this.app.vault.getAbstractFileByPath(CONFIG_FILE_PATH);
-
-		if (existingConfig) {
-			new Notice("Tasks-Config.md already exists");
-			return;
-		}
-
-		await this.app.vault.create(CONFIG_FILE_PATH, CONFIG_TEMPLATE);
-		new Notice("Tasks-Config.md created");
-		await this.refreshOpenViews();
 	}
 
 	private async loadConfig(): Promise<{

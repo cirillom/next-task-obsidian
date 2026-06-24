@@ -1,7 +1,7 @@
 import type { TaskItem } from "../model/task";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-export const DEFAULT_SCORE_FORMULA = "statusPenalty + priority * 20 + ageDays * 1.5 + duePressure";
+export const DEFAULT_SCORE_FORMULA = "priority * 20 + ageDays * 1.5";
 
 export function scoreTask(
 	task: TaskItem,
@@ -28,20 +28,10 @@ function getScoreVariables(task: TaskItem, now: Date): ScoreVariables {
 		? (new Date(task.dueDate).getTime() - now.getTime()) / DAY_MS
 		: 999;
 
-	const duePressure =
-		daysUntilDue < 0 ? 100 :
-		daysUntilDue <= 1 ? 50 :
-		daysUntilDue <= 7 ? 20 :
-		0;
-
-	const statusPenalty = task.completed ? -10000 : 0;
-
 	return {
 		ageDays,
 		daysUntilDue,
-		duePressure,
-		priority,
-		statusPenalty
+		priority
 	};
 }
 

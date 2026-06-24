@@ -34,6 +34,9 @@ const context = await esbuild.context({
 	],
 	format: 'cjs',
 	target: 'es2021',
+	loader: {
+		'.md': 'text',
+	},
 	logLevel: 'info',
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
