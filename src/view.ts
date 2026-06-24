@@ -350,9 +350,15 @@ export class TaskAggregatorView extends ItemView {
 		const tags = card.createDiv({ cls: "task-aggregator-tags" });
 
 		for (const tag of task.tags) {
-			tags.createSpan({
+			const tagButton = tags.createEl("button", {
 				text: `#${tag}`,
 				cls: "task-aggregator-tag"
+			});
+			tagButton.addEventListener("click", () => {
+				const selectedTags = new Set(this.parseTagFilter(this.tagFilterText));
+				selectedTags.add(this.normalizeTag(tag));
+				this.tagFilterText = [...selectedTags].join(" ");
+				this.render();
 			});
 		}
 
