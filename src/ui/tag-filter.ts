@@ -32,20 +32,17 @@ export function renderTagFilter(
 	});
 
 	const visibleTags = options.tags.filter((tag) => tag.includes(normalizeTag(options.searchText)));
-	const allVisibleSelected = visibleTags.every((tag) => options.selectedTags.has(tag));
 
-	const toggleAllButton = tagHintControls.createEl("button", {
-		text: allVisibleSelected ? "Deselect all" : "Select all",
-		cls: "task-aggregator-tag-hint"
-	});
+	if (options.selectedTags.size > 0) {
+		const deselectAllButton = tagHintControls.createEl("button", {
+			text: "Deselect all",
+			cls: "task-aggregator-tag-hint"
+		});
 
-	toggleAllButton.addEventListener("click", () => {
-		if (allVisibleSelected) {
-			options.onChange([...options.selectedTags].filter((tag) => !visibleTags.includes(tag)));
-		} else {
-			options.onChange([...new Set([...options.selectedTags, ...visibleTags])]);
-		}
-	});
+		deselectAllButton.addEventListener("click", () => {
+			options.onChange([]);
+		});
+	}
 
 	const tagHintList = tagHints.createDiv({ cls: "task-aggregator-tag-hint-list" });
 
