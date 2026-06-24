@@ -133,6 +133,30 @@ export default class TaskAggregatorPlugin extends Plugin {
 		await this.app.vault.modify(file, lines.join("\n"));
 	}
 
+	async updateTaskCompleted(task: TaskItem, completed: boolean): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(task.filePath);
+
+		if (!(file instanceof TFile)) {
+			new Notice("Could not find task file");
+			return;
+		}
+
+		const content = await this.app.vault.read(file);
+		const lines = content.split(/\r?\n/);
+		const lineIndex = task.line - 1;
+		const line = lines[lineIndex];
+
+		if (line === undefined) {
+			new Notice("Could not find task line");
+			return;
+		}
+
+		const nextLine = line.replace(/^(\s*-\s+\[)( |x|X)(\]\s+)/, `$1${completed ? "x" : " "}$3`);
+		lines[lineIndex] = completed ? nextLine.replace(/\s+@s:[^\s]+/, "") : nextLine;
+
+		await this.app.vault.modify(file, lines.join("\n"));
+	}
+
 	private expandTaskTags(tags: string[], tagGraph: TagGraph): string[] {
 		const expandedTags = new Set<string>();
 

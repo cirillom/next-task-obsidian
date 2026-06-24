@@ -243,7 +243,10 @@ export class TaskAggregatorView extends ItemView {
 		});
 		checkbox.type = "checkbox";
 		checkbox.checked = task.completed;
-		checkbox.disabled = true;
+		checkbox.addEventListener("change", () => {
+			void this.plugin.updateTaskCompleted(task, checkbox.checked)
+				.then(() => this.refresh());
+		});
 
 		header.createEl("strong", {
 			text: task.title,
