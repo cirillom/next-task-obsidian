@@ -304,9 +304,21 @@ export class TaskAggregatorView extends ItemView {
 		const dueDateInput = dueDateField.createEl("input");
 		dueDateInput.type = "date";
 		dueDateInput.value = task.dueDate ?? "";
-		dueDateInput.addEventListener("change", () => {
+		const saveDueDate = (): void => {
+			if ((task.dueDate ?? "") === dueDateInput.value) {
+				return;
+			}
+
 			void this.plugin.updateTaskDueDate(task, dueDateInput.value || null)
 				.then(() => this.refresh());
+		};
+		dueDateInput.addEventListener("keydown", (event) => {
+			if (event.key === "Enter") {
+				saveDueDate();
+			}
+		});
+		dueDateInput.addEventListener("blur", () => {
+			saveDueDate();
 		});
 
 		const priorityField = meta.createDiv({ cls: "task-aggregator-field" });
