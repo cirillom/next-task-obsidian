@@ -157,6 +157,32 @@ export default class TaskAggregatorPlugin extends Plugin {
 		await this.app.vault.modify(file, lines.join("\n"));
 	}
 
+	async updateTaskDueDate(task: TaskItem, dueDate: string | null): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(task.filePath);
+
+		if (!(file instanceof TFile)) {
+			new Notice("Could not find task file");
+			return;
+		}
+
+		const content = await this.app.vault.read(file);
+		const lines = content.split(/\r?\n/);
+		const lineIndex = task.line - 1;
+		const line = lines[lineIndex];
+
+		if (line === undefined) {
+			new Notice("Could not find task line");
+			return;
+		}
+
+		const lineWithoutDueDate = line.replace(/\s+@d:[^\s]+/, "");
+		lines[lineIndex] = dueDate === null
+			? lineWithoutDueDate
+			: `${lineWithoutDueDate.trimEnd()} @d:${dueDate}`;
+
+		await this.app.vault.modify(file, lines.join("\n"));
+	}
+
 	private expandTaskTags(tags: string[], tagGraph: TagGraph): string[] {
 		const expandedTags = new Set<string>();
 

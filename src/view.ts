@@ -274,7 +274,15 @@ export class TaskAggregatorView extends ItemView {
 		});
 
 		meta.createSpan({ text: `created: ${task.createdDate ?? "none"}` });
-		meta.createSpan({ text: `due: ${task.dueDate ?? "none"}` });
+
+		const dueDateInput = meta.createEl("input");
+		dueDateInput.type = "date";
+		dueDateInput.value = task.dueDate ?? "";
+		dueDateInput.addEventListener("change", () => {
+			void this.plugin.updateTaskDueDate(task, dueDateInput.value || null)
+				.then(() => this.refresh());
+		});
+
 		meta.createSpan({ text: `priority: ${task.priority ?? "none"}` });
 
 		if (task.tags.length > 0) {
