@@ -188,6 +188,15 @@
 	flex: 1;
 }
 
+.task-aggregator-new-task-description {
+	margin-top: 12px;
+}
+
+.task-aggregator-new-task-description textarea {
+	min-height: 90px;
+	width: 100%;
+}
+
 .task-aggregator-modal-tag-list {
 	margin-top: 18px;
 }

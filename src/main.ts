@@ -8,6 +8,16 @@ import { TagGraph, normalizeTag } from "./model/tag-graph";
 import { registerCommands } from "./commands";
 
 const CONFIG_FILE_PATH = "Tasks-Config.md";
+const TASKS_FILE_PATH = "Tasks.md";
+
+export type NewTaskInput = {
+	title: string;
+	dueDate: string | null;
+	priority: number;
+	status: string | null;
+	tags: string[];
+	description: string;
+};
 
 export type TaskAggregatorData = {
 	tasks: TaskItem[];
@@ -146,6 +156,41 @@ export default class TaskAggregatorPlugin extends Plugin {
 
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		view?.editor.setCursor({ line: Math.max(0, task.line - 1), ch: 0 });
+	}
+
+	async createTask(input: NewTaskInput): Promise<void> {
+		const title = input.title.trim();
+
+		if (title.length === 0) {
+			new Notice("Task title is required");
+			return;
+		}
+
+		const metadata = [
+			input.status ? `@s:${input.status}` : null,
+			`@c:${this.getTodayIsoDate()}`,
+			input.dueDate ? `@d:${input.dueDate}` : null,
+			`@p:${input.priority}`,
+			...input.tags.map((tag) => `#${normalizeTag(tag)}`)
+		].filter((value): value is string => value !== null);
+		const description = input.description.trim();
+		const taskText = [
+			`- [ ] ${title} ${metadata.join(" ")}`,
+			...(description.length > 0 ? [`    ${description.replace(/\n/g, "\n    ")}`] : [])
+		].join("\n");
+		const tasksFile = this.app.vault.getAbstractFileByPath(TASKS_FILE_PATH);
+
+		if (!(tasksFile instanceof TFile)) {
+			await this.app.vault.create(TASKS_FILE_PATH, `${taskText}\n`);
+			return;
+		}
+
+		const content = await this.app.vault.read(tasksFile);
+		const nextContent = content.endsWith("\n")
+			? `${content}${taskText}\n`
+			: `${content}\n${taskText}\n`;
+
+		await this.app.vault.modify(tasksFile, nextContent);
 	}
 
 	async updateTaskCompleted(task: TaskItem, completed: boolean): Promise<void> {
@@ -331,5 +376,12 @@ export default class TaskAggregatorPlugin extends Plugin {
 				error: error instanceof Error ? error.message : "Unknown error"
 			};
 		}
+	}
+
+	private getTodayIsoDate(): string {
+		const now = new Date();
+		const timezoneOffsetMs = now.getTimezoneOffset() * 60 * 1000;
+
+		return new Date(now.getTime() - timezoneOffsetMs).toISOString().slice(0, 10);
 	}
 }
