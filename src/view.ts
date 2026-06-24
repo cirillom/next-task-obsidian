@@ -143,8 +143,8 @@ export class TaskAggregatorView extends ItemView {
 		});
 
 		this.renderConfigStatus(container);
-		this.renderStatusHints(container);
-		this.renderAvailableTagHints(container);
+		this.renderStatusFilterControls(container);
+		this.renderTagFilterControls(container);
 	}
 
 	private renderConfigStatus(container: HTMLElement): void {
@@ -190,7 +190,7 @@ export class TaskAggregatorView extends ItemView {
 		});
 	}
 
-	private renderStatusHints(container: HTMLElement): void {
+	private renderStatusFilterControls(container: HTMLElement): void {
 		const statuses = getAvailableStatuses(this.allTasks, this.statusDefinitions);
 
 		renderStatusFilter(container, {
@@ -203,7 +203,7 @@ export class TaskAggregatorView extends ItemView {
 		});
 	}
 
-	private renderAvailableTagHints(container: HTMLElement): void {
+	private renderTagFilterControls(container: HTMLElement): void {
 		const tags = getAvailableTags(this.allTasks, this.tagGraph);
 
 		renderTagFilter(container, {

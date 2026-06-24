@@ -16,10 +16,12 @@ export function renderTagFilter(
 		return;
 	}
 
-	const tagHints = parent.createDiv({ cls: "task-aggregator-tag-hints" });
-	const tagHintControls = tagHints.createDiv({ cls: "task-aggregator-tag-hint-controls" });
+	const tagFilter = parent.createDiv({ cls: "task-aggregator-tag-filter task-aggregator-tag-hints" });
+	const tagFilterControls = tagFilter.createDiv({
+		cls: "task-aggregator-tag-filter-controls task-aggregator-tag-hint-controls"
+	});
 
-	const searchInput = tagHintControls.createEl("input", {
+	const searchInput = tagFilterControls.createEl("input", {
 		cls: "task-aggregator-tag-search"
 	});
 	searchInput.type = "search";
@@ -34,9 +36,9 @@ export function renderTagFilter(
 	const visibleTags = options.tags.filter((tag) => tag.includes(normalizeTag(options.searchText)));
 
 	if (options.selectedTags.size > 0) {
-		const deselectAllButton = tagHintControls.createEl("button", {
+		const deselectAllButton = tagFilterControls.createEl("button", {
 			text: "Deselect all",
-			cls: "task-aggregator-tag-hint"
+			cls: "task-aggregator-tag-filter-option task-aggregator-tag-hint"
 		});
 
 		deselectAllButton.addEventListener("click", () => {
@@ -44,15 +46,17 @@ export function renderTagFilter(
 		});
 	}
 
-	const tagHintList = tagHints.createDiv({ cls: "task-aggregator-tag-hint-list" });
+	const tagFilterList = tagFilter.createDiv({
+		cls: "task-aggregator-tag-filter-list task-aggregator-tag-hint-list"
+	});
 
 	for (const tag of visibleTags) {
 		const isSelected = options.selectedTags.has(tag);
-		const button = tagHintList.createEl("button", {
+		const button = tagFilterList.createEl("button", {
 			text: `#${tag}`,
 			cls: isSelected
-				? "task-aggregator-tag-hint task-aggregator-tag-hint-selected"
-				: "task-aggregator-tag-hint"
+				? "task-aggregator-tag-filter-option task-aggregator-tag-filter-option-selected task-aggregator-tag-hint task-aggregator-tag-hint-selected"
+				: "task-aggregator-tag-filter-option task-aggregator-tag-hint"
 		});
 
 		button.addEventListener("click", () => {

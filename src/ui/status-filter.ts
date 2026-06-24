@@ -12,19 +12,21 @@ export function renderStatusFilter(
 		return;
 	}
 
-	const statusHints = parent.createDiv({ cls: "task-aggregator-status-hints" });
-	statusHints.createSpan({
+	const statusFilter = parent.createDiv({
+		cls: "task-aggregator-status-filter task-aggregator-status-hints"
+	});
+	statusFilter.createSpan({
 		text: "Status",
-		cls: "task-aggregator-status-hints-label"
+		cls: "task-aggregator-status-filter-label task-aggregator-status-hints-label"
 	});
 
 	for (const status of options.statuses) {
 		const isSelected = options.selectedStatuses.has(status);
-		const button = statusHints.createEl("button", {
+		const button = statusFilter.createEl("button", {
 			text: status,
 			cls: isSelected
-				? "task-aggregator-status-hint task-aggregator-status-hint-selected"
-				: "task-aggregator-status-hint"
+				? "task-aggregator-status-filter-option task-aggregator-status-filter-option-selected task-aggregator-status-hint task-aggregator-status-hint-selected"
+				: "task-aggregator-status-filter-option task-aggregator-status-hint"
 		});
 
 		button.addEventListener("click", () => {
