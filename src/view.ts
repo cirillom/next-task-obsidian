@@ -65,6 +65,12 @@ export class TaskAggregatorView extends ItemView {
 		refreshButton.addEventListener("click", () => {
 			void this.refresh();
 		});
+		const configButton = title.createEl("button", { cls: "task-aggregator-icon-button" });
+		configButton.ariaLabel = "Open Tasks-Config.md";
+		setIcon(configButton, "settings");
+		configButton.addEventListener("click", () => {
+			void this.plugin.openTaskConfig();
+		});
 
 		this.renderCycleWarnings(container);
 		this.renderControls(container);

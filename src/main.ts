@@ -6,6 +6,7 @@ import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
 import { parseTaskConfig } from "./parser/config-parser";
 import { TagGraph, normalizeTag } from "./model/tag-graph";
 import { registerCommands } from "./commands";
+import taskConfigTemplate from "./templates/Tasks-Config.md";
 
 const CONFIG_FILE_PATH = "Tasks-Config.md";
 const TASKS_FILE_PATH = "Tasks.md";
@@ -156,6 +157,16 @@ export default class TaskAggregatorPlugin extends Plugin {
 
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		view?.editor.setCursor({ line: Math.max(0, task.line - 1), ch: 0 });
+	}
+
+	async openTaskConfig(): Promise<void> {
+		const existingFile = this.app.vault.getAbstractFileByPath(CONFIG_FILE_PATH);
+		const file = existingFile instanceof TFile
+			? existingFile
+			: await this.app.vault.create(CONFIG_FILE_PATH, taskConfigTemplate);
+
+		const leaf = this.app.workspace.getLeaf(false);
+		await leaf.openFile(file, { active: true });
 	}
 
 	async createTask(input: NewTaskInput): Promise<void> {
