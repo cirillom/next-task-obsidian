@@ -2,6 +2,7 @@ import { TagGraph, normalizeTag } from "../model/tag-graph";
 
 const PARENT_TAG = /#([\p{L}\p{N}_/-]+)/gu;
 const SCORE_FORMULA = /^score\s*[:=]\s*(.+)$/i;
+const TAG_RELATION_SEPARATOR = "|";
 
 export type TaskConfig = {
 	tagGraph: TagGraph;
@@ -35,14 +36,14 @@ export function parseTaskConfig(source: string): TaskConfig {
 			continue;
 		}
 
-		const [rawChild] = trimmedLine.split(/\s+/, 1);
+		const [rawChild, rawParents] = trimmedLine.split(TAG_RELATION_SEPARATOR, 2);
 		const child = normalizeTag(rawChild ?? "");
 
-		if (child.length === 0) {
+		if (child.length === 0 || rawParents === undefined) {
 			continue;
 		}
 
-		for (const match of trimmedLine.matchAll(PARENT_TAG)) {
+		for (const match of rawParents.matchAll(PARENT_TAG)) {
 			const parent = match[1];
 
 			if (parent) {

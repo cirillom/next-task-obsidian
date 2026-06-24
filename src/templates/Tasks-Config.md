@@ -5,6 +5,6 @@
 score = priority * 20 + ageDays * 1.5
 
 # Tag relationships
-# child-tag #parent-tag #another-parent
-obsidian #plugin #notes
-plugin #programming #project
+# #child-tag | #parent-tag #another-parent
+#obsidian | #plugin #notes
+#plugin | #programming #project
