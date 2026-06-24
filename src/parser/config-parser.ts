@@ -3,7 +3,7 @@ import { TagGraph, normalizeTag } from "../model/tag-graph";
 const PARENT_TAG = /#([\p{L}\p{N}_/-]+)/gu;
 const SCORE_FORMULA = /^score\s*[:=]\s*(.+)$/i;
 const SCORE_BLOCK_START = /^score\s*\{\s*$/i;
-const SCORE_CODE_BLOCK_START = /^```task-aggregator-score\s*$/i;
+const SCORE_CODE_BLOCK_START = /^```(?:task-aggregator-score|js|javascript)\s*$/i;
 const TAG_RELATION_SEPARATOR = "|";
 
 export type TaskConfig = {

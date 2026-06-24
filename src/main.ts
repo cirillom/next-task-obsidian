@@ -430,7 +430,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 		}
 
 		try {
-			const content = await this.app.vault.cachedRead(configFile);
+			const content = await this.app.vault.read(configFile);
 			const config = parseTaskConfig(content);
 
 			return {

@@ -3,20 +3,19 @@
 # Score formula
 Available variables: priority, ageDays, dueOffsetDays
 dueOffsetDays is negative before due date and positive after due date.
-```task-aggregator-score
-base = priority * 20
-ageBonus = ageDays * 1.5
-dueBonus = 0
+```js
+// Task Aggregator score
 
-if dueOffsetDays > 0 {
-	dueBonus = 100
-} else if dueOffsetDays >= -1 {
-	dueBonus = 50
-} else if dueOffsetDays >= -7 {
-	dueBonus = 20
+let score = 0;
+
+score += priority * 20;
+score += ageDays * 1.5;
+
+if (dueOffsetDays > 0) {
+	score += dueOffsetDays * 50;
 }
 
-score = base + ageBonus + dueBonus
+return score;
 ```
 
 # Tag relationships
