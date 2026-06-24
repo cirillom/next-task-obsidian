@@ -120,17 +120,8 @@ jobs:
             FLAGS="$FLAGS --prerelease"
           fi
 
-          ASSETS=(
-            "release/next-task-${VERSION}.zip"
-            "release/upload/main.js"
-            "release/upload/manifest.json"
-          )
-
-          if [ -f release/upload/styles.css ]; then
-            ASSETS+=("release/upload/styles.css")
-          fi
-
-          gh release create "$TAG" "${ASSETS[@]}" \
+          gh release create "$TAG" \
+            "release/next-task-${VERSION}.zip" \
             --title "Next Task ${VERSION}" \
-            --notes "Release ${VERSION}" \
+            --notes "" \
             $FLAGS
