@@ -20,7 +20,7 @@ export class TaskAggregatorView extends ItemView {
 	private scoreError: string | null = null;
 	private cycles: string[][] = [];
 
-	private statusFilterText = "";
+	private statusFilterText = "todo doing";
 	private tagFilterText = "";
 	private tagSearchText = "";
 
