@@ -2,6 +2,21 @@
 	color: var(--text-muted);
 }
 
+.task-aggregator-title-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.task-aggregator-title-row h2 {
+	margin: 0;
+}
+
+.task-aggregator-icon-button {
+	width: 32px;
+	padding-inline: 0;
+}
+
 .task-aggregator-list {
 	display: flex;
 	flex-direction: column;

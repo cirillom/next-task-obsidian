@@ -57,7 +57,14 @@ export class TaskAggregatorView extends ItemView {
 		const container = this.contentEl;
 		container.empty();
 
-		container.createEl("h2", { text: "Task aggregator" });
+		const title = container.createDiv({ cls: "task-aggregator-title-row" });
+		title.createEl("h2", { text: "Task aggregator" });
+		const refreshButton = title.createEl("button", { cls: "task-aggregator-icon-button" });
+		refreshButton.ariaLabel = "Refresh";
+		setIcon(refreshButton, "refresh-cw");
+		refreshButton.addEventListener("click", () => {
+			void this.refresh();
+		});
 
 		this.renderCycleWarnings(container);
 		this.renderControls(container);
@@ -99,11 +106,6 @@ export class TaskAggregatorView extends ItemView {
 					await this.refresh();
 				}
 			).open();
-		});
-
-		const refreshButton = buttons.createEl("button", { text: "Refresh" });
-		refreshButton.addEventListener("click", () => {
-			void this.refresh();
 		});
 
 		this.renderConfigStatus(container);
