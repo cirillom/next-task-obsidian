@@ -7,10 +7,6 @@ export const TASK_AGGREGATOR_VIEW = "task-aggregator-view";
 
 const ALL_STATUSES = "__all__";
 const NO_STATUS = "__none__";
-const TAG_MATCH_ALL = "all";
-const TAG_MATCH_ANY = "any";
-
-type TagMatchMode = "any" | "all";
 
 export class TaskAggregatorView extends ItemView {
 	private plugin: TaskAggregatorPlugin;
@@ -24,7 +20,6 @@ export class TaskAggregatorView extends ItemView {
 	private statusFilter = ALL_STATUSES;
 	private tagFilterText = "";
 	private tagSearchText = "";
-	private tagMatchMode: TagMatchMode = TAG_MATCH_ALL;
 
 	constructor(leaf: WorkspaceLeaf, plugin: TaskAggregatorPlugin) {
 		super(leaf);
@@ -114,19 +109,6 @@ export class TaskAggregatorView extends ItemView {
 			this.render();
 		});
 
-		const modeGroup = controls.createDiv({ cls: "task-aggregator-control-group" });
-		modeGroup.createEl("label", { text: "Tag mode" });
-
-		const tagModeSelect = modeGroup.createEl("select");
-		this.addOption(tagModeSelect, TAG_MATCH_ALL, "All");
-		this.addOption(tagModeSelect, TAG_MATCH_ANY, "Any");
-		tagModeSelect.value = this.tagMatchMode;
-
-		tagModeSelect.addEventListener("change", () => {
-			this.tagMatchMode = tagModeSelect.value as TagMatchMode;
-			this.render();
-		});
-
 		const buttons = controls.createDiv({ cls: "task-aggregator-buttons" });
 
 		const refreshButton = buttons.createEl("button", { text: "Refresh" });
@@ -139,7 +121,6 @@ export class TaskAggregatorView extends ItemView {
 			this.statusFilter = ALL_STATUSES;
 			this.tagFilterText = "";
 			this.tagSearchText = "";
-			this.tagMatchMode = TAG_MATCH_ALL;
 			this.render();
 		});
 
@@ -327,13 +308,7 @@ export class TaskAggregatorView extends ItemView {
 		const taskTags = task.tags.map((tag) => this.normalizeTag(tag));
 		const expandedFilters = tagFilter.map((tag) => this.tagGraph.expandDescendants(tag));
 
-		if (this.tagMatchMode === "any") {
-			return expandedFilters.some((expandedFilter) =>
-				taskTags.some((taskTag) => expandedFilter.has(taskTag))
-			);
-		}
-
-		return expandedFilters.every((expandedFilter) =>
+		return expandedFilters.some((expandedFilter) =>
 			taskTags.some((taskTag) => expandedFilter.has(taskTag))
 		);
 	}
