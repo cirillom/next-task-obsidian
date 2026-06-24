@@ -9,6 +9,7 @@ import { ConfigService } from "./config/config-service";
 import { CONFIG_FILE_PATH } from "./constants";
 import { TaskRepository } from "./tasks/task-repository";
 import type { NewTaskInput } from "./tasks/task-repository";
+import { openTaskSource } from "./ui/task-source-opener";
 
 export type { NewTaskInput };
 
@@ -107,7 +108,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async openTaskSource(task: TaskItem): Promise<void> {
-		await this.taskRepository.openTaskSource(task);
+		await openTaskSource(this.app, task);
 	}
 
 	async openTaskConfig(): Promise<void> {
