@@ -89,11 +89,24 @@ export default class TaskAggregatorPlugin extends Plugin {
 		for (const file of files) {
 			const content = await this.app.vault.cachedRead(file);
 			const tasks = parseTasksFromMarkdown(content, file.path);
+			const lines = content.split(/\r?\n/);
+			let didRemoveDoneStatuses = false;
 
 			for (const task of tasks) {
+				if (task.completed && task.status !== null) {
+					const lineIndex = task.line - 1;
+					lines[lineIndex] = (lines[lineIndex] ?? "").replace(/\s+@s:[^\s]+/, "");
+					task.status = null;
+					didRemoveDoneStatuses = true;
+				}
+
 				task.resolvedTags = this.expandTaskTags(task.tags, tagGraph);
 				task.score = scoreTask(task, new Date(), scoreFormula);
 				allTasks.push(task);
+			}
+
+			if (didRemoveDoneStatuses) {
+				await this.app.vault.modify(file, lines.join("\n"));
 			}
 		}
 
