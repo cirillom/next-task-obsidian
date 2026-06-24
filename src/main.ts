@@ -1,15 +1,12 @@
-import { Notice, Plugin, TFile } from "obsidian";
+import { Notice, Plugin } from "obsidian";
 import type { TaskItem } from "./model/task";
-import { DEFAULT_SCORE_SCRIPT, validateScoreScript } from "./scoring/score";
+import { DEFAULT_SCORE_SCRIPT } from "./scoring/score";
 import { TaskAggregatorView, TASK_AGGREGATOR_VIEW } from "./view";
-import { parseTaskConfig } from "./parser/config-parser";
-import { TagGraph, normalizeTag } from "./model/tag-graph";
+import { TagGraph } from "./model/tag-graph";
 import { registerCommands } from "./commands";
-import taskConfigTemplate from "./templates/Tasks-Config.md";
+import { ConfigService, CONFIG_FILE_PATH } from "./config/config-service";
 import { TaskRepository } from "./tasks/task-repository";
 import type { NewTaskInput } from "./tasks/task-repository";
-
-const CONFIG_FILE_PATH = "Tasks-Config.md";
 
 export type { NewTaskInput };
 
@@ -25,9 +22,11 @@ export type TaskAggregatorData = {
 export default class TaskAggregatorPlugin extends Plugin {
 	readonly configFilePath = CONFIG_FILE_PATH;
 	private taskRepository!: TaskRepository;
+	private configService!: ConfigService;
 
 	async onload(): Promise<void> {
 		this.taskRepository = new TaskRepository(this.app);
+		this.configService = new ConfigService(this.app);
 
 		this.registerView(
 			TASK_AGGREGATOR_VIEW,
@@ -81,7 +80,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async loadTaskAggregatorData(): Promise<TaskAggregatorData> {
-		const configResult = await this.loadConfig();
+		const configResult = await this.configService.loadConfig();
 		const tasks = await this.loadTasks(
 			configResult.scoreScript ?? DEFAULT_SCORE_SCRIPT,
 			configResult.tagGraph
@@ -106,13 +105,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async openTaskConfig(): Promise<void> {
-		const existingFile = this.app.vault.getAbstractFileByPath(CONFIG_FILE_PATH);
-		const file = existingFile instanceof TFile
-			? existingFile
-			: await this.app.vault.create(CONFIG_FILE_PATH, taskConfigTemplate);
-
-		const leaf = this.app.workspace.getLeaf(false);
-		await leaf.openFile(file, { active: true });
+		await this.configService.openTaskConfig();
 	}
 
 	async createTask(input: NewTaskInput): Promise<void> {
@@ -140,76 +133,16 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async addConfigTag(tag: string): Promise<string | null> {
-		const normalizedTag = normalizeTag(tag).replace(/\s+/g, "-");
-
-		if (normalizedTag.length === 0) {
-			return null;
-		}
-
-		const configFile = this.app.vault.getAbstractFileByPath(CONFIG_FILE_PATH);
-		const tagLine = `#${normalizedTag} |`;
-
-		if (!(configFile instanceof TFile)) {
-			await this.app.vault.create(CONFIG_FILE_PATH, `${tagLine}\n`);
-			return normalizedTag;
-		}
-
-		const content = await this.app.vault.read(configFile);
-
-		if (parseTaskConfig(content).tagGraph.getAllTags().includes(normalizedTag)) {
-			return normalizedTag;
-		}
-
-		const nextContent = content.endsWith("\n")
-			? `${content}${tagLine}\n`
-			: `${content}\n${tagLine}\n`;
-
-		await this.app.vault.modify(configFile, nextContent);
-
-		return normalizedTag;
+		return this.configService.addConfigTag(tag);
 	}
 
-	private async loadConfig(): Promise<{
-		tagGraph: TagGraph;
-		scoreScript: string | null;
-		scoreError: string | null;
-		status: TaskAggregatorData["configStatus"];
-		error: string | null;
-	}> {
-		const configFile = this.app.vault.getAbstractFileByPath(CONFIG_FILE_PATH);
+	async createConfigTemplate(): Promise<void> {
+		const result = await this.configService.createConfigTemplate();
 
-		if (!(configFile instanceof TFile)) {
-			return {
-				tagGraph: new TagGraph(),
-				scoreScript: null,
-				scoreError: null,
-				status: "missing",
-				error: null
-			};
-		}
+		new Notice(result === "created" ? "Tasks-Config.md created" : "Tasks-Config.md already exists");
 
-		try {
-			const content = await this.app.vault.read(configFile);
-			const config = parseTaskConfig(content);
-
-			return {
-				tagGraph: config.tagGraph,
-				scoreScript: config.scoreScript,
-				scoreError: config.scoreScript ? validateScoreScript(config.scoreScript) : null,
-				status: "loaded",
-				error: null
-			};
-		} catch (error) {
-			console.error("Task Aggregator failed to load Tasks-Config.md", error);
-
-			return {
-				tagGraph: new TagGraph(),
-				scoreScript: null,
-				scoreError: null,
-				status: "error",
-				error: error instanceof Error ? error.message : "Unknown error"
-			};
+		if (result === "created") {
+			await this.refreshOpenViews();
 		}
 	}
-
 }
