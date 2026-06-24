@@ -7,6 +7,7 @@ export const TASK_AGGREGATOR_VIEW = "task-aggregator-view";
 
 const ALL_STATUSES = "__all__";
 const NO_STATUS = "__none__";
+const EDITABLE_STATUSES = ["doing", "blocked"] as const;
 
 export class TaskAggregatorView extends ItemView {
 	private plugin: TaskAggregatorPlugin;
@@ -243,7 +244,19 @@ export class TaskAggregatorView extends ItemView {
 
 		const meta = card.createDiv({ cls: "task-aggregator-meta" });
 
-		meta.createSpan({ text: `status: ${task.status ?? "none"}` });
+		const statusSelect = meta.createEl("select");
+		this.addOption(statusSelect, "", "No status");
+
+		for (const status of EDITABLE_STATUSES) {
+			this.addOption(statusSelect, status, status);
+		}
+
+		statusSelect.value = task.status ?? "";
+		statusSelect.addEventListener("change", () => {
+			void this.plugin.updateTaskStatus(task, statusSelect.value || null)
+				.then(() => this.refresh());
+		});
+
 		meta.createSpan({ text: `created: ${task.createdDate ?? "none"}` });
 		meta.createSpan({ text: `due: ${task.dueDate ?? "none"}` });
 		meta.createSpan({ text: `priority: ${task.priority ?? "none"}` });
