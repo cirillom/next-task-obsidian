@@ -343,7 +343,7 @@ export default class TaskAggregatorPlugin extends Plugin {
 	}
 
 	async addConfigTag(tag: string): Promise<string | null> {
-		const normalizedTag = normalizeTag(tag);
+		const normalizedTag = normalizeTag(tag).replace(/\s+/g, "-");
 
 		if (normalizedTag.length === 0) {
 			return null;
