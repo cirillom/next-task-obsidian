@@ -1,7 +1,9 @@
 import type { TaskItem } from "../model/task";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-export const DEFAULT_SCORE_FORMULA = "priority * 20 + ageDays * 1.5";
+export const DEFAULT_SCORE_FORMULA = `base = priority * 20
+ageBonus = ageDays * 1.5
+score = base + ageBonus`;
 
 export function scoreTask(
 	task: TaskItem,
@@ -15,9 +17,9 @@ export function scoreTask(
 	const variables = getScoreVariables(task, now);
 
 	try {
-		return evaluateScoreFormula(formula, variables);
+		return evaluateScoreScript(formula, variables);
 	} catch {
-		return evaluateScoreFormula(DEFAULT_SCORE_FORMULA, variables);
+		return evaluateScoreScript(DEFAULT_SCORE_FORMULA, variables);
 	}
 }
 
@@ -49,7 +51,174 @@ const PRECEDENCE: Record<string, number> = {
 	"/": 2
 };
 
-function evaluateScoreFormula(formula: string, variables: ScoreVariables): number {
+function evaluateScoreScript(script: string, variables: ScoreVariables): number {
+	const scriptLines = getScriptLines(script);
+	const values = { ...variables };
+
+	if (scriptLines.length === 1 && !scriptLines[0]?.includes("=")) {
+		return evaluateExpression(scriptLines[0] ?? "", values);
+	}
+
+	executeLines(scriptLines, values, 0, scriptLines.length);
+
+	const score = values.score;
+
+	if (score === undefined || !Number.isFinite(score)) {
+		throw new Error("Invalid score formula");
+	}
+
+	return score;
+}
+
+function executeLines(lines: string[], variables: ScoreVariables, start: number, end: number): void {
+	let i = start;
+
+	while (i < end) {
+		const line = lines[i] ?? "";
+
+		if (line.startsWith("if ")) {
+			i = executeIf(lines, variables, i);
+			continue;
+		}
+
+		if (line.startsWith("else")) {
+			return;
+		}
+
+		const assignment = line.match(/^([A-Za-z][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+
+		if (!assignment) {
+			throw new Error("Invalid score formula");
+		}
+
+		const name = assignment[1];
+		const expression = assignment[2];
+
+		if (!name || !expression) {
+			throw new Error("Invalid score formula");
+		}
+
+		variables[name] = evaluateExpression(expression, variables);
+		i++;
+	}
+}
+
+function executeIf(lines: string[], variables: ScoreVariables, start: number): number {
+	let i = start;
+	let didRun = false;
+
+	while (i < lines.length) {
+		const line = lines[i] ?? "";
+		const block = findBlock(lines, i);
+		const condition = getCondition(line);
+
+		if (!didRun && (condition === null || evaluateCondition(condition, variables))) {
+			executeLines(lines, variables, block.start, block.end);
+			didRun = true;
+		}
+
+		i = block.end + 1;
+
+		if (!lines[i]?.startsWith("else")) {
+			return i;
+		}
+	}
+
+	return i;
+}
+
+function getCondition(line: string): string | null {
+	const ifMatch = line.match(/^if\s+(.+)\s*\{\s*$/);
+	const elseIfMatch = line.match(/^else\s+if\s+(.+)\s*\{\s*$/);
+
+	if (ifMatch) {
+		return ifMatch[1] ?? "";
+	}
+
+	if (elseIfMatch) {
+		return elseIfMatch[1] ?? "";
+	}
+
+	if (/^else\s*\{\s*$/.test(line)) {
+		return null;
+	}
+
+	throw new Error("Invalid score formula");
+}
+
+function evaluateCondition(condition: string, variables: ScoreVariables): boolean {
+	const match = condition.match(/^(.+?)\s*(<=|>=|==|!=|<|>)\s*(.+)$/);
+
+	if (!match) {
+		return evaluateExpression(condition, variables) !== 0;
+	}
+
+	const left = evaluateExpression(match[1] ?? "", variables);
+	const operator = match[2];
+	const right = evaluateExpression(match[3] ?? "", variables);
+
+	if (operator === "<") return left < right;
+	if (operator === ">") return left > right;
+	if (operator === "<=") return left <= right;
+	if (operator === ">=") return left >= right;
+	if (operator === "==") return left === right;
+	if (operator === "!=") return left !== right;
+
+	throw new Error("Invalid score formula");
+}
+
+function findBlock(lines: string[], start: number): { start: number; end: number } {
+	if (!lines[start]?.endsWith("{")) {
+		throw new Error("Invalid score formula");
+	}
+
+	let depth = 1;
+
+	for (let i = start + 1; i < lines.length; i++) {
+		const line = lines[i] ?? "";
+
+		if (line.endsWith("{")) {
+			depth++;
+		}
+
+		if (line === "}") {
+			depth--;
+		}
+
+		if (depth === 0) {
+			return {
+				start: start + 1,
+				end: i
+			};
+		}
+	}
+
+	throw new Error("Invalid score formula");
+}
+
+function getScriptLines(script: string): string[] {
+	const lines: string[] = [];
+
+	for (const rawLine of script.split(/\r?\n/)) {
+		const line = rawLine.trim();
+
+		if (line.length === 0 || line.startsWith("#") || line.startsWith("//")) {
+			continue;
+		}
+
+		if (line.startsWith("} else")) {
+			lines.push("}");
+			lines.push(line.slice(2).trim());
+			continue;
+		}
+
+		lines.push(line);
+	}
+
+	return lines;
+}
+
+function evaluateExpression(formula: string, variables: ScoreVariables): number {
 	const values: number[] = [];
 	const operators: string[] = [];
 	const tokens = tokenize(formula);

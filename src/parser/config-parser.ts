@@ -2,6 +2,8 @@ import { TagGraph, normalizeTag } from "../model/tag-graph";
 
 const PARENT_TAG = /#([\p{L}\p{N}_/-]+)/gu;
 const SCORE_FORMULA = /^score\s*[:=]\s*(.+)$/i;
+const SCORE_BLOCK_START = /^score\s*\{\s*$/i;
+const SCORE_CODE_BLOCK_START = /^```task-aggregator-score\s*$/i;
 const TAG_RELATION_SEPARATOR = "|";
 
 export type TaskConfig = {
@@ -18,7 +20,8 @@ export function parseTaskConfig(source: string): TaskConfig {
 	let scoreFormula: string | null = null;
 	const lines = source.split(/\r?\n/);
 
-	for (const line of lines) {
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i] ?? "";
 		const trimmedLine = line.trim();
 
 		if (
@@ -33,6 +36,48 @@ export function parseTaskConfig(source: string): TaskConfig {
 
 		if (scoreMatch) {
 			scoreFormula = scoreMatch[1]?.trim() ?? null;
+			continue;
+		}
+
+		if (SCORE_CODE_BLOCK_START.test(trimmedLine)) {
+			const scoreLines: string[] = [];
+
+			for (i = i + 1; i < lines.length; i++) {
+				const scoreLine = lines[i] ?? "";
+
+				if (scoreLine.trim().startsWith("```")) {
+					break;
+				}
+
+				scoreLines.push(scoreLine);
+			}
+
+			scoreFormula = scoreLines.join("\n");
+			continue;
+		}
+
+		if (SCORE_BLOCK_START.test(trimmedLine)) {
+			const scoreLines: string[] = [];
+			let depth = 1;
+
+			for (i = i + 1; i < lines.length; i++) {
+				const scoreLine = lines[i] ?? "";
+				const trimmedScoreLine = scoreLine.trim();
+				depth += (scoreLine.match(/\{/g) ?? []).length;
+				depth -= (scoreLine.match(/\}/g) ?? []).length;
+
+				if (depth === 0 && trimmedScoreLine === "}") {
+					break;
+				}
+
+				if (trimmedScoreLine.startsWith("```")) {
+					continue;
+				}
+
+				scoreLines.push(scoreLine);
+			}
+
+			scoreFormula = scoreLines.join("\n");
 			continue;
 		}
 
