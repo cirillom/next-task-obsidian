@@ -1,5 +1,6 @@
 import { App, Notice, TFile } from "obsidian";
 import type { TaskItem } from "../model/task";
+import { DESCRIPTION_LINE } from "./task-markdown";
 
 type TaskLineUpdater = (line: string) => string;
 
@@ -33,7 +34,7 @@ export async function replaceTaskBlock(
 
 	while (
 		source.lines[source.lineIndex + deleteCount] !== undefined &&
-		/^\s{2,}\S/.test(source.lines[source.lineIndex + deleteCount] ?? "")
+		DESCRIPTION_LINE.test(source.lines[source.lineIndex + deleteCount] ?? "")
 	) {
 		deleteCount++;
 	}

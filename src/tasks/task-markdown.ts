@@ -1,7 +1,7 @@
 import { normalizeTag } from "../model/tag-graph";
 
 export const TASK_LINE = /^\s*-\s+\[( |x|X)\]\s+(.*)$/;
-export const DESCRIPTION_LINE = /^\s{2,}\S/;
+export const DESCRIPTION_LINE = /^(?:\t+| {2,})\s*\S/;
 
 const FIELD = /@\w+:[^\s]+/g;
 const STATUS_FIELD = /\s+@s:[^\s]+/;
