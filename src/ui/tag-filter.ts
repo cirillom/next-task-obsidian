@@ -4,6 +4,7 @@ export type TagFilterOptions = {
 	tags: string[];
 	selectedTags: Set<string>;
 	searchText: string;
+	focusSearch?: boolean;
 	onSearchChange: (searchText: string) => void;
 	onChange: (tags: string[]) => void;
 };
@@ -27,8 +28,12 @@ export function renderTagFilter(
 	searchInput.type = "search";
 	searchInput.placeholder = "Search tags";
 	searchInput.value = options.searchText;
-	searchInput.setSelectionRange(options.searchText.length, options.searchText.length);
-	searchInput.focus();
+
+	if (options.focusSearch) {
+		searchInput.setSelectionRange(options.searchText.length, options.searchText.length);
+		searchInput.focus();
+	}
+
 	searchInput.addEventListener("input", () => {
 		options.onSearchChange(searchInput.value);
 	});

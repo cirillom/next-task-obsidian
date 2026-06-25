@@ -39,6 +39,7 @@ export class TaskAggregatorView extends ItemView {
 	private statusFilterText = DEFAULT_STATUS_FILTER_TEXT;
 	private tagFilterText = "";
 	private tagSearchText = "";
+	private shouldFocusTagSearch = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: TaskAggregatorPlugin) {
 		super(leaf);
@@ -210,8 +211,10 @@ export class TaskAggregatorView extends ItemView {
 			tags,
 			selectedTags: new Set(parseTagFilter(this.tagFilterText)),
 			searchText: this.tagSearchText,
+			focusSearch: this.shouldFocusTagSearch,
 			onSearchChange: (searchText) => {
 				this.tagSearchText = searchText;
+				this.shouldFocusTagSearch = true;
 				this.render();
 			},
 			onChange: (selectedTags) => {
@@ -219,6 +222,7 @@ export class TaskAggregatorView extends ItemView {
 				this.render();
 			}
 		});
+		this.shouldFocusTagSearch = false;
 	}
 
 	private renderTask(parent: HTMLElement, task: TaskItem): void {
