@@ -1,7 +1,7 @@
 import { parseYaml } from "obsidian";
 import type { TFile } from "obsidian";
 import type { TaskItem } from "../model/task";
-import { DONE_STATUS, normalizeStatus } from "../model/task-status";
+import { normalizeStatus } from "../model/task-status";
 import { normalizeTag } from "../model/tag-graph";
 import taskFileTemplate from "../templates/Task-File.md";
 
@@ -16,6 +16,13 @@ type FrontMatterBlock = {
 	yaml: string;
 	contentStart: number;
 };
+type TaskFileName = {
+	completed: boolean;
+	title: string;
+};
+
+const TODO_FILE_PREFIX = "( ) ";
+const DONE_FILE_PREFIX = "(x) ";
 
 export function parseTaskFile(content: string, file: TFile): TaskItem | null {
 	const frontMatter = parseTaskFileFrontMatter(content);
@@ -24,21 +31,22 @@ export function parseTaskFile(content: string, file: TFile): TaskItem | null {
 		return null;
 	}
 
+	const fileName = parseTaskFileName(file.basename);
 	const status = getString(frontMatter[TASK_FILE_STATUS_PROPERTY]);
 	const createdDate = getString(frontMatter[TASK_FILE_CREATED_DATE_PROPERTY]);
 	const dueDate = getString(frontMatter[TASK_FILE_DUE_DATE_PROPERTY]);
 	const priority = Number(frontMatter[TASK_FILE_PRIORITY_PROPERTY]);
 
-	if (!status || !createdDate || !dueDate || !isValidPriority(priority)) {
+	if (!fileName || !createdDate || !dueDate || !isValidPriority(priority)) {
 		return null;
 	}
 
-	const normalizedStatus = normalizeStatus(status);
+	const normalizedStatus = status ? normalizeStatus(status) : null;
 
 	return {
 		sourceType: "file",
-		title: file.basename,
-		status: normalizedStatus,
+		title: fileName.title,
+		status: fileName.completed ? null : normalizedStatus,
 		createdDate,
 		dueDate,
 		priority,
@@ -46,9 +54,23 @@ export function parseTaskFile(content: string, file: TFile): TaskItem | null {
 		description: getTaskFileBody(content),
 		filePath: file.path,
 		line: 1,
-		completed: normalizedStatus === DONE_STATUS,
+		completed: fileName.completed,
 		score: 0
 	};
+}
+
+export function buildTaskFileName(title: string, completed: boolean): string {
+	const prefix = completed ? DONE_FILE_PREFIX : TODO_FILE_PREFIX;
+
+	return `${prefix}${title.trim() || "New task"}.md`;
+}
+
+export function buildTaskFileCompletionPath(file: TFile, completed: boolean): string {
+	const fileName = parseTaskFileName(file.basename);
+	const title = fileName?.title ?? file.basename;
+	const folder = getFolderPath(file.path);
+
+	return `${folder}${buildTaskFileName(title, completed)}`;
 }
 
 export function buildTaskFileTemplate(createdDate: string): string {
@@ -132,4 +154,28 @@ function isValidPriority(priority: number): boolean {
 
 function isRecord(value: unknown): value is TaskFileFrontMatter {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseTaskFileName(fileName: string): TaskFileName | null {
+	if (fileName.startsWith(TODO_FILE_PREFIX)) {
+		return {
+			completed: false,
+			title: fileName.slice(TODO_FILE_PREFIX.length).trim()
+		};
+	}
+
+	if (fileName.startsWith(DONE_FILE_PREFIX)) {
+		return {
+			completed: true,
+			title: fileName.slice(DONE_FILE_PREFIX.length).trim()
+		};
+	}
+
+	return null;
+}
+
+function getFolderPath(path: string): string {
+	const lastSlashIndex = path.lastIndexOf("/");
+
+	return lastSlashIndex >= 0 ? path.slice(0, lastSlashIndex + 1) : "";
 }

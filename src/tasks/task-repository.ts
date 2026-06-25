@@ -1,12 +1,13 @@
 import { App, Notice, TFile } from "obsidian";
 import { CONFIG_FILE_PATH, TASKS_FILE_PATH } from "../constants";
 import type { TaskItem } from "../model/task";
-import { DONE_STATUS, TODO_STATUS } from "../model/task-status";
 import { DEFAULT_STATUS_DEFINITIONS } from "../model/task-status";
 import { TagGraph } from "../model/tag-graph";
 import { parseTasksFromMarkdown } from "../parser/task-parser";
 import { DEFAULT_SCORE_SCRIPT, scoreTask } from "../scoring/score";
 import {
+	buildTaskFileCompletionPath,
+	buildTaskFileName,
 	buildTaskFileTemplate,
 	parseTaskFile,
 	replaceTaskFileBody,
@@ -115,7 +116,7 @@ export class TaskRepository {
 			}
 
 			await this.updateTaskFileProperties(task, {
-				[TASK_FILE_STATUS_PROPERTY]: input.status ?? TODO_STATUS,
+				[TASK_FILE_STATUS_PROPERTY]: task.completed ? null : input.status,
 				[TASK_FILE_PRIORITY_PROPERTY]: input.priority,
 				[TASK_FILE_DUE_DATE_PROPERTY]: input.dueDate,
 				[TASK_FILE_TAGS_PROPERTY]: input.tags
@@ -145,7 +146,11 @@ export class TaskRepository {
 
 	async updateTaskStatus(task: TaskItem, status: string | null): Promise<void> {
 		if (task.sourceType === "file") {
-			await this.updateTaskFileProperty(task, TASK_FILE_STATUS_PROPERTY, status ?? TODO_STATUS);
+			await this.updateTaskFileProperty(
+				task,
+				TASK_FILE_STATUS_PROPERTY,
+				task.completed ? null : status
+			);
 			return;
 		}
 
@@ -158,7 +163,17 @@ export class TaskRepository {
 
 	async updateTaskCompleted(task: TaskItem, completed: boolean): Promise<void> {
 		if (task.sourceType === "file") {
-			await this.updateTaskFileProperty(task, TASK_FILE_STATUS_PROPERTY, completed ? DONE_STATUS : TODO_STATUS);
+			const file = this.getTaskFile(task);
+
+			if (!file) {
+				return;
+			}
+
+			if (completed) {
+				await this.updateTaskFileProperty(task, TASK_FILE_STATUS_PROPERTY, null);
+			}
+
+			await this.renameTaskFile(file, completed);
 			return;
 		}
 
@@ -207,7 +222,7 @@ export class TaskRepository {
 
 	async createTaskFileTemplate(): Promise<TFile> {
 		const title = "New task";
-		const path = this.getAvailableTaskFilePath(`${title}.md`);
+		const path = this.getAvailableTaskFilePath(buildTaskFileName(title, false));
 
 		return this.app.vault.create(path, buildTaskFileTemplate(this.getTodayIsoDate()));
 	}
@@ -272,8 +287,19 @@ export class TaskRepository {
 		return file;
 	}
 
-	private getAvailableTaskFilePath(preferredPath: string): string {
-		if (!this.app.vault.getAbstractFileByPath(preferredPath)) {
+	private async renameTaskFile(file: TFile, completed: boolean): Promise<void> {
+		const nextPath = this.getAvailableTaskFilePath(
+			buildTaskFileCompletionPath(file, completed),
+			file.path
+		);
+
+		if (nextPath !== file.path) {
+			await this.app.vault.rename(file, nextPath);
+		}
+	}
+
+	private getAvailableTaskFilePath(preferredPath: string, currentPath?: string): string {
+		if (preferredPath === currentPath || !this.app.vault.getAbstractFileByPath(preferredPath)) {
 			return preferredPath;
 		}
 
