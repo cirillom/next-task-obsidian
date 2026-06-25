@@ -225,7 +225,7 @@ export class TaskAggregatorView extends ItemView {
 		renderTaskCard(parent, task, {
 			app: this.plugin.app,
 			component: this,
-			statuses: this.getWritableStatuses(),
+			statuses: this.getTaskStatusOptions(task),
 			callbacks: {
 				updateCompleted: async (selectedTask, completed) => {
 					await this.plugin.updateTaskCompleted(selectedTask, completed);
@@ -256,7 +256,7 @@ export class TaskAggregatorView extends ItemView {
 					new TaskFormModal(
 						this.plugin,
 						getEditableTags(this.allTasks, this.tagGraph),
-						this.getWritableStatuses(),
+						this.getTaskStatusOptions(selectedTask),
 						async (input) => {
 							await this.plugin.updateTask(selectedTask, input);
 							await this.refresh();
@@ -284,6 +284,12 @@ export class TaskAggregatorView extends ItemView {
 
 	private getWritableStatuses(): string[] {
 		return getWritableStatuses(this.statusDefinitions);
+	}
+
+	private getTaskStatusOptions(task: TaskItem): string[] {
+		return task.sourceType === "file"
+			? this.statusDefinitions.map((status) => status.name)
+			: this.getWritableStatuses();
 	}
 
 }

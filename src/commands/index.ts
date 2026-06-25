@@ -30,4 +30,12 @@ export function registerCommands(plugin: TaskAggregatorPlugin): void {
 			await plugin.createConfigTemplate();
 		}
 	});
+
+	plugin.addCommand({
+		id: "create-task-file",
+		name: "Create task file",
+		callback: async () => {
+			await plugin.createTaskFileTemplate();
+		}
+	});
 }

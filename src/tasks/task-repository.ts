@@ -1,10 +1,20 @@
 import { App, Notice, TFile } from "obsidian";
 import { CONFIG_FILE_PATH, TASKS_FILE_PATH } from "../constants";
 import type { TaskItem } from "../model/task";
+import { DONE_STATUS, TODO_STATUS } from "../model/task-status";
 import { DEFAULT_STATUS_DEFINITIONS } from "../model/task-status";
 import { TagGraph } from "../model/tag-graph";
 import { parseTasksFromMarkdown } from "../parser/task-parser";
 import { DEFAULT_SCORE_SCRIPT, scoreTask } from "../scoring/score";
+import {
+	buildTaskFileTemplate,
+	parseTaskFile,
+	replaceTaskFileBody,
+	TASK_FILE_DUE_DATE_PROPERTY,
+	TASK_FILE_PRIORITY_PROPERTY,
+	TASK_FILE_STATUS_PROPERTY,
+	TASK_FILE_TAGS_PROPERTY
+} from "./task-file";
 import {
 	buildTaskMarkdownLines,
 	updateTaskLineCompleted,
@@ -40,7 +50,15 @@ export class TaskRepository {
 
 		for (const file of files) {
 			const content = await this.app.vault.cachedRead(file);
+			const fileTask = parseTaskFile(content, file);
 			const tasks = parseTasksFromMarkdown(content, file.path);
+
+			if (fileTask) {
+				fileTask.resolvedTags = this.expandTaskTags(fileTask.tags, tagGraph);
+				fileTask.score = scoreTask(fileTask, new Date(), scoreScript, statusDefinitions);
+				allTasks.push(fileTask);
+				continue;
+			}
 
 			for (const task of tasks) {
 				task.resolvedTags = this.expandTaskTags(task.tags, tagGraph);
@@ -84,6 +102,30 @@ export class TaskRepository {
 	}
 
 	async updateTask(task: TaskItem, input: NewTaskInput): Promise<void> {
+		if (task.sourceType === "file") {
+			if (!input.dueDate) {
+				new Notice("Due date is required for file tasks");
+				return;
+			}
+
+			const file = this.getTaskFile(task);
+
+			if (!file) {
+				return;
+			}
+
+			await this.updateTaskFileProperties(task, {
+				[TASK_FILE_STATUS_PROPERTY]: input.status ?? TODO_STATUS,
+				[TASK_FILE_PRIORITY_PROPERTY]: input.priority,
+				[TASK_FILE_DUE_DATE_PROPERTY]: input.dueDate,
+				[TASK_FILE_TAGS_PROPERTY]: input.tags
+			});
+
+			const content = await this.app.vault.read(file);
+			await this.app.vault.modify(file, replaceTaskFileBody(content, input.description));
+			return;
+		}
+
 		const title = input.title.trim();
 
 		if (title.length === 0) {
@@ -102,6 +144,11 @@ export class TaskRepository {
 	}
 
 	async updateTaskStatus(task: TaskItem, status: string | null): Promise<void> {
+		if (task.sourceType === "file") {
+			await this.updateTaskFileProperty(task, TASK_FILE_STATUS_PROPERTY, status ?? TODO_STATUS);
+			return;
+		}
+
 		const nextStatus = task.completed ? null : status;
 
 		await modifyTaskLine(this.app, task, (line) => {
@@ -110,27 +157,59 @@ export class TaskRepository {
 	}
 
 	async updateTaskCompleted(task: TaskItem, completed: boolean): Promise<void> {
+		if (task.sourceType === "file") {
+			await this.updateTaskFileProperty(task, TASK_FILE_STATUS_PROPERTY, completed ? DONE_STATUS : TODO_STATUS);
+			return;
+		}
+
 		await modifyTaskLine(this.app, task, (line) => {
 			return updateTaskLineCompleted(line, completed);
 		});
 	}
 
 	async updateTaskDueDate(task: TaskItem, dueDate: string | null): Promise<void> {
+		if (task.sourceType === "file") {
+			if (!dueDate) {
+				new Notice("Due date is required for file tasks");
+				return;
+			}
+
+			await this.updateTaskFileProperty(task, TASK_FILE_DUE_DATE_PROPERTY, dueDate);
+			return;
+		}
+
 		await modifyTaskLine(this.app, task, (line) => {
 			return updateTaskLineDueDate(line, dueDate);
 		});
 	}
 
 	async updateTaskPriority(task: TaskItem, priority: number): Promise<void> {
+		if (task.sourceType === "file") {
+			await this.updateTaskFileProperty(task, TASK_FILE_PRIORITY_PROPERTY, priority);
+			return;
+		}
+
 		await modifyTaskLine(this.app, task, (line) => {
 			return updateTaskLinePriority(line, priority);
 		});
 	}
 
 	async updateTaskTags(task: TaskItem, tags: string[]): Promise<void> {
+		if (task.sourceType === "file") {
+			await this.updateTaskFileProperty(task, TASK_FILE_TAGS_PROPERTY, tags);
+			return;
+		}
+
 		await modifyTaskLine(this.app, task, (line) => {
 			return updateTaskLineTags(line, tags);
 		});
+	}
+
+	async createTaskFileTemplate(): Promise<TFile> {
+		const title = "New task";
+		const path = this.getAvailableTaskFilePath(`${title}.md`);
+
+		return this.app.vault.create(path, buildTaskFileTemplate(this.getTodayIsoDate()));
 	}
 
 	private async normalizeCompletedTaskStatuses(
@@ -152,6 +231,63 @@ export class TaskRepository {
 
 		if (didRemoveDoneStatuses) {
 			await this.app.vault.modify(file, lines.join("\n"));
+		}
+	}
+
+	private async updateTaskFileProperty(
+		task: TaskItem,
+		property: string,
+		value: unknown
+	): Promise<void> {
+		await this.updateTaskFileProperties(task, { [property]: value });
+	}
+
+	private async updateTaskFileProperties(
+		task: TaskItem,
+		properties: Record<string, unknown>
+	): Promise<void> {
+		const file = this.getTaskFile(task);
+
+		if (!file) {
+			return;
+		}
+
+		await this.app.fileManager.processFrontMatter(file, (frontMatter) => {
+			const taskFrontMatter = frontMatter as Record<string, unknown>;
+
+			for (const [property, value] of Object.entries(properties)) {
+				taskFrontMatter[property] = value;
+			}
+		});
+	}
+
+	private getTaskFile(task: TaskItem): TFile | null {
+		const file = this.app.vault.getAbstractFileByPath(task.filePath);
+
+		if (!(file instanceof TFile)) {
+			new Notice("Could not find task file");
+			return null;
+		}
+
+		return file;
+	}
+
+	private getAvailableTaskFilePath(preferredPath: string): string {
+		if (!this.app.vault.getAbstractFileByPath(preferredPath)) {
+			return preferredPath;
+		}
+
+		const extension = ".md";
+		const basePath = preferredPath.endsWith(extension)
+			? preferredPath.slice(0, -extension.length)
+			: preferredPath;
+
+		for (let index = 1; ; index++) {
+			const path = `${basePath} ${index}${extension}`;
+
+			if (!this.app.vault.getAbstractFileByPath(path)) {
+				return path;
+			}
 		}
 	}
 

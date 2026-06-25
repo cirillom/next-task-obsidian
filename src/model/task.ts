@@ -1,4 +1,5 @@
 export type TaskItem = {
+  sourceType: "line" | "file";
   title: string;
   status: string | null;
   createdDate: string; // YYYY-MM-DD
