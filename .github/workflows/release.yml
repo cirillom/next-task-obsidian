@@ -123,5 +123,5 @@ jobs:
           gh release create "$TAG" \
             "release/next-task-${VERSION}.zip" \
             --title "Next Task ${VERSION}" \
-            --notes "" \
+            --generate-notes \
             $FLAGS
