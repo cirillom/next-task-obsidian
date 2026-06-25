@@ -130,6 +130,10 @@ export default class TaskAggregatorPlugin extends Plugin {
 		await this.taskRepository.updateTask(task, input);
 	}
 
+	async updateTaskDescription(task: TaskItem, description: string): Promise<void> {
+		await this.taskRepository.updateTaskDescription(task, description);
+	}
+
 	async updateTaskCompleted(task: TaskItem, completed: boolean): Promise<void> {
 		await this.taskRepository.updateTaskCompleted(task, completed);
 	}

@@ -247,6 +247,10 @@ export class TaskAggregatorView extends ItemView {
 					await this.plugin.updateTaskStatus(selectedTask, status);
 					await this.refresh();
 				},
+				updateDescription: async (selectedTask, description) => {
+					await this.plugin.updateTaskDescription(selectedTask, description);
+					await this.refresh();
+				},
 				openSource: async (selectedTask) => {
 					await this.plugin.openTaskSource(selectedTask);
 				},
