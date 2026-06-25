@@ -1,5 +1,8 @@
 import { Notice } from "obsidian";
 import type TaskAggregatorPlugin from "../main";
+import { createFileTask } from "./create-file-task";
+import { createInlineTask } from "./create-inline-task";
+import { createQuickTask } from "./create-quick-task";
 
 export function registerCommands(plugin: TaskAggregatorPlugin): void {
 	plugin.addRibbonIcon("list-todo", "Open next task", async () => {
@@ -32,10 +35,26 @@ export function registerCommands(plugin: TaskAggregatorPlugin): void {
 	});
 
 	plugin.addCommand({
+		id: "create-inline-task",
+		name: "Inline task",
+		editorCallback: (editor) => {
+			void createInlineTask(plugin, editor);
+		}
+	});
+
+	plugin.addCommand({
 		id: "create-task-file",
-		name: "Create task file",
+		name: "File task",
 		callback: async () => {
-			await plugin.createTaskFileTemplate();
+			await createFileTask(plugin);
+		}
+	});
+
+	plugin.addCommand({
+		id: "create-quick-task",
+		name: "Quick task",
+		callback: async () => {
+			await createQuickTask(plugin);
 		}
 	});
 }
