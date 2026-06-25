@@ -104,7 +104,13 @@
 
 .task-aggregator-description {
 	margin-top: 8px;
+	max-height: 220px;
+	overflow: auto;
 	white-space: pre-wrap;
+}
+
+.task-aggregator-description p {
+	margin-block: 0 0.35em;
 }
 
 .task-aggregator-source {

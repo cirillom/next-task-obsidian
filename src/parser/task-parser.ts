@@ -23,6 +23,7 @@ export function parseTasksFromMarkdown(source: string, filePath: string): TaskIt
 		const descriptionLines = collectTaskDescription(lines, i + 1);
 
 		tasks.push({
+			sourceType: "line",
 			title: metadata.title,
 			status: metadata.status,
 			createdDate: metadata.createdDate,
