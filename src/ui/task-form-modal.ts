@@ -3,6 +3,8 @@ import type TaskAggregatorPlugin from "../main";
 import type { NewTaskInput } from "../main";
 import type { TaskItem } from "../model/task";
 import { normalizeTag } from "../model/tag-graph";
+import { getWritableStatuses } from "../model/task-status";
+import { getEditableTags } from "../tasks/task-filters";
 import { renderDueDateField } from "./due-date-field";
 import { renderPriorityStepper } from "./priority-stepper";
 import { renderStatusSelectField } from "./status-select";
@@ -22,7 +24,7 @@ export class TaskFormModal extends Modal {
 		private readonly plugin: TaskAggregatorPlugin,
 		availableTags: string[],
 		private readonly statuses: string[],
-		private readonly onSave: (input: NewTaskInput) => Promise<void>,
+		private readonly onSave: (input: NewTaskInput) => Promise<boolean>,
 		private readonly task?: TaskItem
 	) {
 		super(plugin.app);
@@ -110,7 +112,11 @@ export class TaskFormModal extends Modal {
 				status: this.status || null,
 				tags: [...this.selectedTags],
 				description: this.description
-			}).then(() => this.close());
+			}).then((didSave) => {
+				if (didSave) {
+					this.close();
+				}
+			});
 		});
 	}
 
@@ -129,4 +135,20 @@ export class TaskFormModal extends Modal {
 		this.tagSearchText = "";
 		this.render();
 	}
+}
+
+export async function openTaskForm(
+	plugin: TaskAggregatorPlugin,
+	onSave: (input: NewTaskInput) => Promise<boolean>,
+	task?: TaskItem
+): Promise<void> {
+	const data = await plugin.loadTaskAggregatorData();
+
+	new TaskFormModal(
+		plugin,
+		getEditableTags(data.tasks, data.tagGraph),
+		getWritableStatuses(data.statusDefinitions),
+		onSave,
+		task
+	).open();
 }

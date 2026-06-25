@@ -119,11 +119,17 @@ export default class TaskAggregatorPlugin extends Plugin {
 		await this.taskRepository.createTask(input);
 	}
 
-	async createTaskFileTemplate(): Promise<void> {
-		const file = await this.taskRepository.createTaskFileTemplate();
+	async createTaskFile(input: NewTaskInput): Promise<boolean> {
+		const file = await this.taskRepository.createTaskFile(input);
+
+		if (!file) {
+			return false;
+		}
+
 		const leaf = this.app.workspace.getLeaf(false);
 		await leaf.openFile(file, { active: true });
 		await this.refreshOpenViews();
+		return true;
 	}
 
 	async updateTask(task: TaskItem, input: NewTaskInput): Promise<void> {

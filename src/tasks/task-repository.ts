@@ -5,6 +5,7 @@ import { DEFAULT_STATUS_DEFINITIONS } from "../model/task-status";
 import { TagGraph } from "../model/tag-graph";
 import { parseTasksFromMarkdown } from "../parser/task-parser";
 import { DEFAULT_SCORE_SCRIPT, scoreTask } from "../scoring/score";
+import { getTodayIsoDate } from "../utils/date";
 import {
 	buildTaskFileCompletionPath,
 	buildTaskFileName,
@@ -85,7 +86,7 @@ export class TaskRepository {
 			...input,
 			title,
 			completed: false,
-			createdDate: this.getTodayIsoDate()
+			createdDate: getTodayIsoDate()
 		}).join("\n");
 		const tasksFile = this.app.vault.getAbstractFileByPath(TASKS_FILE_PATH);
 
@@ -100,6 +101,35 @@ export class TaskRepository {
 			: `${content}\n${taskText}\n`;
 
 		await this.app.vault.modify(tasksFile, nextContent);
+	}
+
+	async createTaskFile(input: NewTaskInput): Promise<TFile | null> {
+		const title = input.title.trim();
+
+		if (title.length === 0) {
+			new Notice("Task title is required");
+			return null;
+		}
+
+		if (!input.dueDate) {
+			new Notice("Due date is required for file tasks");
+			return null;
+		}
+
+		const path = this.getAvailableTaskFilePath(buildTaskFileName(title, false));
+		const file = await this.app.vault.create(path, buildTaskFileTemplate(getTodayIsoDate()));
+
+		await this.updateTaskFilePropertiesForFile(file, {
+			[TASK_FILE_STATUS_PROPERTY]: input.status,
+			[TASK_FILE_PRIORITY_PROPERTY]: input.priority,
+			[TASK_FILE_DUE_DATE_PROPERTY]: input.dueDate,
+			[TASK_FILE_TAGS_PROPERTY]: input.tags
+		});
+
+		const content = await this.app.vault.read(file);
+		await this.app.vault.modify(file, replaceTaskFileBody(content, input.description));
+
+		return file;
 	}
 
 	async updateTask(task: TaskItem, input: NewTaskInput): Promise<void> {
@@ -247,13 +277,6 @@ export class TaskRepository {
 		});
 	}
 
-	async createTaskFileTemplate(): Promise<TFile> {
-		const title = "New task";
-		const path = this.getAvailableTaskFilePath(buildTaskFileName(title, false));
-
-		return this.app.vault.create(path, buildTaskFileTemplate(this.getTodayIsoDate()));
-	}
-
 	private async normalizeCompletedTaskStatuses(
 		file: TFile,
 		content: string,
@@ -294,6 +317,13 @@ export class TaskRepository {
 			return;
 		}
 
+		await this.updateTaskFilePropertiesForFile(file, properties);
+	}
+
+	private async updateTaskFilePropertiesForFile(
+		file: TFile,
+		properties: Record<string, unknown>
+	): Promise<void> {
 		await this.app.fileManager.processFrontMatter(file, (frontMatter) => {
 			const taskFrontMatter = frontMatter as Record<string, unknown>;
 
@@ -356,10 +386,4 @@ export class TaskRepository {
 		return [...expandedTags];
 	}
 
-	private getTodayIsoDate(): string {
-		const now = new Date();
-		const timezoneOffsetMs = now.getTimezoneOffset() * 60 * 1000;
-
-		return new Date(now.getTime() - timezoneOffsetMs).toISOString().slice(0, 10);
-	}
 }

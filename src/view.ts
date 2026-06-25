@@ -12,14 +12,13 @@ import {
 	DEFAULT_STATUS_FILTER_TEXT,
 	getAvailableStatuses,
 	getAvailableTags,
-	getEditableTags,
 	getFilteredTasks,
 	parseStatusFilter,
 	parseTagFilter
 } from "./tasks/task-filters";
 import { renderStatusFilter } from "./ui/status-filter";
 import { renderTaskCard } from "./ui/task-card";
-import { TaskFormModal } from "./ui/task-form-modal";
+import { openTaskForm } from "./ui/task-form-modal";
 import { renderTagFilter } from "./ui/tag-filter";
 
 export const NEXT_TASK_VIEW = "next-task-view";
@@ -132,15 +131,14 @@ export class TaskAggregatorView extends ItemView {
 
 		const newTaskButton = buttons.createEl("button", { text: "New task" });
 		newTaskButton.addEventListener("click", () => {
-			new TaskFormModal(
+			void openTaskForm(
 				this.plugin,
-				getEditableTags(this.allTasks, this.tagGraph),
-				this.getWritableStatuses(),
 				async (input) => {
 					await this.plugin.createTask(input);
 					await this.refresh();
+					return true;
 				}
-			).open();
+			);
 		});
 
 		this.renderConfigStatus(container);
@@ -261,16 +259,15 @@ export class TaskAggregatorView extends ItemView {
 					this.render();
 				},
 				editTask: (selectedTask) => {
-					new TaskFormModal(
+					void openTaskForm(
 						this.plugin,
-						getEditableTags(this.allTasks, this.tagGraph),
-						this.getWritableStatuses(),
 						async (input) => {
 							await this.plugin.updateTask(selectedTask, input);
 							await this.refresh();
+							return true;
 						},
 						selectedTask
-					).open();
+					);
 				}
 			}
 		});
