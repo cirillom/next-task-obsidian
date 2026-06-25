@@ -1,5 +1,6 @@
 import { App, Component, MarkdownRenderer, setIcon } from "obsidian";
 import type { TaskItem } from "../model/task";
+import { updateDescriptionCheckbox } from "../tasks/task-markdown";
 import { renderDueDateField } from "./due-date-field";
 import { renderPriorityStepper } from "./priority-stepper";
 import { renderStatusSelectField } from "./status-select";
@@ -9,6 +10,7 @@ type TaskCardCallbacks = {
 	updateDueDate: (task: TaskItem, dueDate: string | null) => Promise<void>;
 	updatePriority: (task: TaskItem, priority: number) => Promise<void>;
 	updateStatus: (task: TaskItem, status: string | null) => Promise<void>;
+	updateDescription: (task: TaskItem, description: string) => Promise<void>;
 	openSource: (task: TaskItem) => Promise<void>;
 	filterTag: (tag: string) => void;
 	editTask: (task: TaskItem) => void;
@@ -110,6 +112,28 @@ function renderDescription(
 		task.filePath,
 		options.component
 	);
+	description.addEventListener("change", (event) => {
+		if (!(event.target instanceof HTMLInputElement) || event.target.type !== "checkbox") {
+			return;
+		}
+
+		const checkboxes = Array.from(description.querySelectorAll<HTMLInputElement>("input[type='checkbox']"));
+		const checkboxIndex = checkboxes.indexOf(event.target);
+
+		if (checkboxIndex < 0) {
+			return;
+		}
+
+		const nextDescription = updateDescriptionCheckbox(
+			task.description,
+			checkboxIndex,
+			event.target.checked
+		);
+
+		if (nextDescription !== task.description) {
+			void options.callbacks.updateDescription(task, nextDescription);
+		}
+	});
 }
 
 function renderSource(

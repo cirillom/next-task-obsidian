@@ -9,6 +9,8 @@ const DUE_DATE_FIELD = /\s+@d:[^\s]+/;
 const PRIORITY_FIELD = /\s+@p:[^\s]+/;
 const TAG = /#[\p{L}\p{N}_/-]+/gu;
 const TAG_WITH_LEADING_SPACE = /\s+#[\p{L}\p{N}_/-]+/gu;
+const DESCRIPTION_INDENT = /^(?:\t| {2,4})/;
+const DESCRIPTION_CHECKBOX = /^(\s*[-*+]\s+\[)( |x|X)(\]\s+)/;
 
 export type ParsedTaskLine = {
 	completed: boolean;
@@ -72,11 +74,38 @@ export function collectTaskDescription(lines: string[], startIndex: number): str
 	let lineIndex = startIndex;
 
 	while (lineIndex < lines.length && DESCRIPTION_LINE.test(lines[lineIndex] ?? "")) {
-		descriptionLines.push((lines[lineIndex] ?? "").trim());
+		descriptionLines.push(stripDescriptionIndent(lines[lineIndex] ?? ""));
 		lineIndex++;
 	}
 
 	return descriptionLines;
+}
+
+export function updateDescriptionCheckbox(
+	description: string,
+	checkboxIndex: number,
+	checked: boolean
+): string {
+	let currentCheckboxIndex = 0;
+	let didUpdate = false;
+	const lines = description.split(/\r?\n/).map((line) => {
+		const match = line.match(DESCRIPTION_CHECKBOX);
+
+		if (!match) {
+			return line;
+		}
+
+		if (currentCheckboxIndex !== checkboxIndex) {
+			currentCheckboxIndex++;
+			return line;
+		}
+
+		currentCheckboxIndex++;
+		didUpdate = true;
+		return line.replace(DESCRIPTION_CHECKBOX, `$1${checked ? "x" : " "}$3`);
+	});
+
+	return didUpdate ? lines.join("\n") : description;
 }
 
 export function buildTaskMarkdownLines(input: TaskMarkdownInput): string[] {
@@ -138,4 +167,8 @@ export function updateTaskLineTags(line: string, tags: string[]): string {
 function extractField(text: string, field: string): string | null {
 	const match = text.match(new RegExp(`@${field}:([^\\s]+)`));
 	return match?.[1] ?? null;
+}
+
+function stripDescriptionIndent(line: string): string {
+	return line.replace(DESCRIPTION_INDENT, "").trimEnd();
 }

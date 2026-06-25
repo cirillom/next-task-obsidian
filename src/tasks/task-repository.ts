@@ -144,6 +144,33 @@ export class TaskRepository {
 		await replaceTaskBlock(this.app, task, nextTaskLines);
 	}
 
+	async updateTaskDescription(task: TaskItem, description: string): Promise<void> {
+		if (task.sourceType === "file") {
+			const file = this.getTaskFile(task);
+
+			if (!file) {
+				return;
+			}
+
+			const content = await this.app.vault.read(file);
+			await this.app.vault.modify(file, replaceTaskFileBody(content, description));
+			return;
+		}
+
+		const nextTaskLines = buildTaskMarkdownLines({
+			title: task.title,
+			completed: task.completed,
+			createdDate: task.createdDate,
+			dueDate: task.dueDate,
+			priority: task.priority,
+			status: task.status,
+			tags: task.tags,
+			description
+		});
+
+		await replaceTaskBlock(this.app, task, nextTaskLines);
+	}
+
 	async updateTaskStatus(task: TaskItem, status: string | null): Promise<void> {
 		if (task.sourceType === "file") {
 			await this.updateTaskFileProperty(
